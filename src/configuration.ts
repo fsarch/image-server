@@ -46,8 +46,46 @@ const CONFIG_VALIDATION_SCHEMA = Joi.object({
     type: Joi.string().valid('named').required(),
   }),
   storage: Joi.object({
-    data: Joi.string().required(),
-    cache: Joi.string().required(),
+    data: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        type: Joi.string().valid('filesystem').required(),
+        config: Joi.object({
+          path: Joi.string().required(),
+        }).required(),
+      }),
+      Joi.object({
+        type: Joi.string().valid('s3').required(),
+        config: Joi.object({
+          bucket: Joi.string().required(),
+          region: Joi.string().required(),
+          accessKeyId: Joi.string(),
+          secretAccessKey: Joi.string(),
+          endpoint: Joi.string(),
+          prefix: Joi.string(),
+        }).required(),
+      }),
+    ).required(),
+    cache: Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        type: Joi.string().valid('filesystem').required(),
+        config: Joi.object({
+          path: Joi.string().required(),
+        }).required(),
+      }),
+      Joi.object({
+        type: Joi.string().valid('s3').required(),
+        config: Joi.object({
+          bucket: Joi.string().required(),
+          region: Joi.string().required(),
+          accessKeyId: Joi.string(),
+          secretAccessKey: Joi.string(),
+          endpoint: Joi.string(),
+          prefix: Joi.string(),
+        }).required(),
+      }),
+    ).required(),
   }).default({}),
   caching: Joi.object({
     memory: Joi.alternatives().try(
@@ -92,11 +130,15 @@ export default () => {
     readFileSync(resolve(process.cwd(), process.env.CONFIG_FILE_PATH || YAML_CONFIG_FILENAME), 'utf8'),
   ) as ConfigType;
 
-  config.storage = {
-    data: process.env.DATA_PATH,
-    cache: process.env.CACHE_PATH,
-    ...config.storage,
-  };
+  // Handle environment variable overrides with backward compatibility
+  if (process.env.DATA_PATH) {
+    config.storage = config.storage || { data: '', cache: '' };
+    config.storage.data = process.env.DATA_PATH;
+  }
+  if (process.env.CACHE_PATH) {
+    config.storage = config.storage || { data: '', cache: '' };
+    config.storage.cache = process.env.CACHE_PATH;
+  }
 
   const valid = CONFIG_VALIDATION_SCHEMA.validate(config, { abortEarly: false, allowUnknown: true });
   if (valid.error) {

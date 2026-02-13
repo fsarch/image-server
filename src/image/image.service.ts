@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
+import { Injectable, NotFoundException, NotImplementedException, Inject } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Image } from "../database/entities/image.entity.js";
 import { In, Repository } from "typeorm";
@@ -11,6 +11,9 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { getFormatInfoByMimeType } from "../utils/format-info.utils.js";
 import { ImagePreset } from "../database/entities/image-preset.entity.js";
+import { IStorageProvider } from "../storage/storage-provider.interface.js";
+import { DATA_STORAGE_PROVIDER, CACHE_STORAGE_PROVIDER } from "../storage/storage.module.js";
+import { FileSystemStorageProvider } from "../storage/filesystem-storage.provider.js";
 
 export type ResolveResponseType = {
   imagePath: string;
@@ -29,6 +32,10 @@ export class ImageService {
     @InjectRepository(ImageCache)
     private imageCachesRepository: Repository<ImageCache>,
     private readonly configService: ConfigService,
+    @Inject(DATA_STORAGE_PROVIDER)
+    private readonly dataStorage: IStorageProvider,
+    @Inject(CACHE_STORAGE_PROVIDER)
+    private readonly cacheStorage: IStorageProvider,
   ) {
   }
 
@@ -98,11 +105,11 @@ export class ImageService {
     const path = this.getImageCacheFile(image.id, image.creationTime, cacheCreationTime, alias, mimeType);
     const pathDir = dirname(path);
 
-    await fs.mkdir(pathDir, {
+    await this.cacheStorage.mkdir(pathDir, {
       recursive: true,
     });
 
-    await fs.writeFile(path, convertedImage);
+    await this.cacheStorage.writeFile(path, convertedImage);
 
     await this.imageCachesRepository.save({
       image,
@@ -132,8 +139,8 @@ export class ImageService {
     const month = creationTime.getUTCMonth();
     const day = creationTime.getUTCDate();
 
-    const dataPath = this.configService.get<ConfigStorageType['data']>('storage.data');
-    return path.resolve(dataPath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
+    const basePath = this.getStorageBasePath(this.dataStorage);
+    return path.resolve(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
   }
 
   private getImageCacheFile(imageId: string, imageCreationTime: Date, cacheCreationTime: Date, presetAlias: string, mimeType: string) {
@@ -150,10 +157,19 @@ export class ImageService {
 
     const formatInfo = getFormatInfoByMimeType(mimeType);
 
-    const dataPath = this.configService.get<ConfigStorageType['data']>('storage.cache');
+    const basePath = this.getStorageBasePath(this.cacheStorage);
 
     const fileName = `${presetAlias}_${cacheYear}-${cacheMonth}-${cacheDay}_${cacheHour}-${cacheMinute}-${cacheSeconds}.${formatInfo.extension}`;
 
-    return path.resolve(dataPath, imageYear, imageMonth, imageDay, imageId, fileName);
+    return path.resolve(basePath, imageYear, imageMonth, imageDay, imageId, fileName);
+  }
+
+  private getStorageBasePath(storage: IStorageProvider): string {
+    // For filesystem storage, we can get the base path
+    if (storage instanceof FileSystemStorageProvider) {
+      return storage.getBasePath();
+    }
+    // For S3 or other storage, we use root path
+    return '';
   }
 }

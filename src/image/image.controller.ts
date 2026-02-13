@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, NotFoundException, Param, Req, Res } from '@nestjs/common';
+import { Controller, Get, Headers, NotFoundException, Param, Req, Res, Inject } from '@nestjs/common';
 import { Response } from 'express';
 import crypto from 'node:crypto';
 import { ConfigService } from "@nestjs/config";
@@ -12,6 +12,8 @@ import { CacheType } from "../cache/cache.enum.js";
 import { runInBackground } from "../utils/run-in-background.utils.js";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
 import { Public } from "../fsarch/auth/decorators/public.decorator.js";
+import { IStorageProvider } from "../storage/storage-provider.interface.js";
+import { DATA_STORAGE_PROVIDER, CACHE_STORAGE_PROVIDER } from "../storage/storage.module.js";
 
 @ApiTags('images')
 @Controller({
@@ -23,6 +25,10 @@ export class ImageController {
     private readonly configService: ConfigService,
     private readonly imageService: ImageService,
     private readonly cacheService: CacheService,
+    @Inject(DATA_STORAGE_PROVIDER)
+    private readonly dataStorage: IStorageProvider,
+    @Inject(CACHE_STORAGE_PROVIDER)
+    private readonly cacheStorage: IStorageProvider,
   ) {
   }
 
@@ -42,7 +48,7 @@ export class ImageController {
           CacheType.ImageData,
           [cachePath],
           async () => {
-            const imageBuffer = await fs.readFile(cachePath);
+            const imageBuffer = await this.cacheStorage.readFile(cachePath);
             return {
               buffer: imageBuffer,
               meta: {
@@ -77,7 +83,7 @@ export class ImageController {
           mimeType: resolveInfo.imageCaches[0].value.mimeType,
         };
 
-        if (error.code === 'ENOENT') {
+        if (error.code === 'ENOENT' || error.name === 'NoSuchKey') {
           console.error('cached image not found', cacheInfo);
 
           runInBackground(async () => {
@@ -94,7 +100,7 @@ export class ImageController {
       }
     }
 
-    const fileContent = await fs.readFile(resolveInfo.imagePath);
+    const fileContent = await this.dataStorage.readFile(resolveInfo.imagePath);
 
     const preferredFormat = preferredMimeTypes
       .map((preferredMimeType) => {

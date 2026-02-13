@@ -86,9 +86,11 @@ type ConfigCockroachdbDatabaseType = {
   };
 };
 
+import { StorageConfig } from '../storage/storage-config.types.js';
+
 export type ConfigStorageType = {
-  data: string;
-  cache: string;
+  data: StorageConfig;
+  cache: StorageConfig;
 };
 
 export type ConfigNamingType = {
