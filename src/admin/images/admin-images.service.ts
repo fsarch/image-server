@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Request } from 'express';
 import { Repository } from "typeorm";
@@ -12,6 +12,9 @@ import crypto from 'node:crypto';
 import { Slug } from "../../database/entities/slug.entity.js";
 import slugify from "slugify";
 import { getFormatInfoBySharpFormat } from "../../utils/format-info.utils.js";
+import { IStorageProvider } from "../../storage/storage-provider.interface.js";
+import { DATA_STORAGE_PROVIDER } from "../../storage/storage.module.js";
+import { FileSystemStorageProvider } from "../../storage/filesystem-storage.provider.js";
 
 @Injectable()
 export class AdminImagesService {
@@ -21,6 +24,8 @@ export class AdminImagesService {
     @InjectRepository(Slug)
     private slugsRepository: Repository<Slug>,
     private readonly configService: ConfigService,
+    @Inject(DATA_STORAGE_PROVIDER)
+    private readonly dataStorage: IStorageProvider,
   ) {
   }
 
@@ -63,7 +68,7 @@ export class AdminImagesService {
 
     const basePath = this.getImageDirectory(creationTime);
 
-    await fs.promises.mkdir(basePath, {
+    await this.dataStorage.mkdir(basePath, {
       recursive: true,
     });
 
@@ -76,7 +81,7 @@ export class AdminImagesService {
 
     const filePath = path.resolve(basePath, `${id}.${formatInfo.extension}`);
 
-    await fs.promises.writeFile(filePath, buffer);
+    await this.dataStorage.writeFile(filePath, buffer);
 
     const hashed = crypto
       .createHash('md5')
@@ -126,7 +131,16 @@ export class AdminImagesService {
     const month = creationTime.getUTCMonth();
     const day = creationTime.getUTCDate();
 
-    const dataPath = this.configService.get<ConfigStorageType['data']>('storage.data');
-    return path.resolve(dataPath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
+    const basePath = this.getStorageBasePath();
+    return path.resolve(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
+  }
+
+  private getStorageBasePath(): string {
+    // For filesystem storage, we can get the base path
+    if (this.dataStorage instanceof FileSystemStorageProvider) {
+      return this.dataStorage.getBasePath();
+    }
+    // For S3 or other storage, we use root path
+    return '';
   }
 }

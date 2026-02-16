@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Headers, Req, Param, Query, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Headers, Req, Param, Query, Res, NotFoundException, Inject } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AdminImagesService } from "./admin-images.service.js";
 import { Image } from "../../database/entities/image.entity.js";
@@ -15,6 +15,8 @@ import path from "node:path";
 import { getFormatInfoByMimeType } from "../../utils/format-info.utils.js";
 import { ImageService } from "../../image/image.service.js";
 import sharp from "sharp";
+import { IStorageProvider } from "../../storage/storage-provider.interface.js";
+import { DATA_STORAGE_PROVIDER } from "../../storage/storage.module.js";
 
 @ApiTags('admin')
 @Controller({
@@ -28,6 +30,8 @@ export class AdminImagesController {
     @InjectRepository(Slug)
     private slugsRepository: Repository<Slug>,
     private readonly imageService: ImageService,
+    @Inject(DATA_STORAGE_PROVIDER)
+    private readonly dataStorage: IStorageProvider,
   ) {
   }
 
@@ -69,7 +73,7 @@ export class AdminImagesController {
 
     const filePath = path.resolve(this.imageService.getImageDirectory(image.creationTime), `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`);
 
-    let fileContent: Uint8Array = new Uint8Array(await fs.readFile(filePath));
+    let fileContent: Uint8Array = new Uint8Array(await this.dataStorage.readFile(filePath));
 
     if (size && !isNaN(parseInt(size, 10))) {
       const sizeNumber = parseInt(size, 10);

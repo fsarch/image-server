@@ -19,6 +19,7 @@ import { FsarchModule } from "./fsarch/fsarch.module.js";
 import { Image } from "./database/entities/image.entity.js";
 import { ImageCache } from "./database/entities/image-cache.entity.js";
 import { Slug } from "./database/entities/slug.entity.js";
+import { StorageModule } from './storage/storage.module.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +29,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
       load: [configuration],
       isGlobal: true,
     }),
+    StorageModule,
     FsarchModule.register({
       auth: {},
       database: {
