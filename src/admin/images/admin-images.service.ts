@@ -79,7 +79,7 @@ export class AdminImagesService {
 
     const formatInfo = getFormatInfoBySharpFormat(metadata.format);
 
-    const filePath = path.resolve(basePath, `${id}.${formatInfo.extension}`);
+    const filePath = path.join(basePath, `${id}.${formatInfo.extension}`);
 
     await this.dataStorage.writeFile(filePath, buffer);
 
@@ -132,7 +132,7 @@ export class AdminImagesService {
     const day = creationTime.getUTCDate();
 
     const basePath = this.getStorageBasePath();
-    return path.resolve(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
+    return path.join(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
   }
 
   private getStorageBasePath(): string {

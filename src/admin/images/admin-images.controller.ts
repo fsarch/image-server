@@ -71,7 +71,7 @@ export class AdminImagesController {
   ): Promise<void> {
     const image = await this.adminImagesService.getById(id);
 
-    const filePath = path.resolve(this.imageService.getImageDirectory(image.creationTime), `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`);
+    const filePath = path.join(this.imageService.getImageDirectory(image.creationTime), `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`);
 
     let fileContent: Uint8Array = new Uint8Array(await this.dataStorage.readFile(filePath));
 

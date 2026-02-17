@@ -92,7 +92,7 @@ export class ImageService {
       .sort((a, b) => a.priority - b.priority);
 
     return {
-      imagePath: path.resolve(this.getImageDirectory(image.creationTime), `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`),
+      imagePath: path.join(this.getImageDirectory(image.creationTime), `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`),
       image,
       preset,
       imageCaches: sortedCaches,
@@ -140,7 +140,7 @@ export class ImageService {
     const day = creationTime.getUTCDate();
 
     const basePath = this.getStorageBasePath(this.dataStorage);
-    return path.resolve(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
+    return path.join(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
   }
 
   private getImageCacheFile(imageId: string, imageCreationTime: Date, cacheCreationTime: Date, presetAlias: string, mimeType: string) {
@@ -161,7 +161,7 @@ export class ImageService {
 
     const fileName = `${presetAlias}_${cacheYear}-${cacheMonth}-${cacheDay}_${cacheHour}-${cacheMinute}-${cacheSeconds}.${formatInfo.extension}`;
 
-    return path.resolve(basePath, imageYear, imageMonth, imageDay, imageId, fileName);
+    return path.join(basePath, imageYear, imageMonth, imageDay, imageId, fileName);
   }
 
   private getStorageBasePath(storage: IStorageProvider): string {
