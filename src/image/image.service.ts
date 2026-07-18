@@ -5,13 +5,12 @@ import { In, Repository } from "typeorm";
 import { Slug } from "../database/entities/slug.entity.js";
 import { ImageCache } from "../database/entities/image-cache.entity.js";
 import { ConfigService } from "@nestjs/config";
-import { ConfigImagePresetType, ConfigStorageType } from "../types/config.type.js";
+import { ConfigImagePresetType } from "../types/config.type.js";
 import path, { dirname } from "node:path";
-import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { getFormatInfoByMimeType } from "../utils/format-info.utils.js";
 import { ImagePreset } from "../database/entities/image-preset.entity.js";
-import { IStorageProvider } from "../storage/storage-provider.interface.js";
+import type { IStorageProvider } from "../storage/storage-provider.interface.js";
 import { DATA_STORAGE_PROVIDER, CACHE_STORAGE_PROVIDER } from "../storage/storage.module.js";
 import { FileSystemStorageProvider } from "../storage/filesystem-storage.provider.js";
 

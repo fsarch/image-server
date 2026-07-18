@@ -1,5 +1,5 @@
 import { Controller, Get, Headers, NotFoundException, Param, Req, Res, Inject } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import crypto from 'node:crypto';
 import { ConfigService } from "@nestjs/config";
 import { ConfigCachingClientType, ConfigNamingType } from "../types/config.type.js";
@@ -11,9 +11,9 @@ import { CacheService } from "../cache/cache.service.js";
 import { CacheType } from "../cache/cache.enum.js";
 import { runInBackground } from "../utils/run-in-background.utils.js";
 import { ApiParam, ApiTags } from "@nestjs/swagger";
-import { Public } from "../fsarch/auth/decorators/public.decorator.js";
-import { IStorageProvider } from "../storage/storage-provider.interface.js";
+import type { IStorageProvider } from "../storage/storage-provider.interface.js";
 import { DATA_STORAGE_PROVIDER, CACHE_STORAGE_PROVIDER } from "../storage/storage.module.js";
+import { Public } from "@fsarch/server/auth";
 
 @ApiTags('images')
 @Controller({

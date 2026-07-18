@@ -12,7 +12,7 @@ import crypto from 'node:crypto';
 import { Slug } from "../../database/entities/slug.entity.js";
 import slugify from "slugify";
 import { getFormatInfoBySharpFormat } from "../../utils/format-info.utils.js";
-import { IStorageProvider } from "../../storage/storage-provider.interface.js";
+import type { IStorageProvider } from "../../storage/storage-provider.interface.js";
 import { DATA_STORAGE_PROVIDER } from "../../storage/storage.module.js";
 import { FileSystemStorageProvider } from "../../storage/filesystem-storage.provider.js";
 
