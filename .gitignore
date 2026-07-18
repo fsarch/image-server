@@ -336,3 +336,4 @@ $RECYCLE.BIN/
 /example-data/data
 /config/typeorm.js
 /config/certs
+example-data/config.yml
