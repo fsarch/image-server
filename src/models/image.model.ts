@@ -5,6 +5,31 @@ export class ImageSlugDto {
   slug: string;
 }
 
+export class ImageTagDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  key: string;
+
+  @ApiProperty()
+  value: string;
+}
+
+export class TagDefinitionDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  key: string;
+
+  @ApiProperty({ required: false })
+  description?: string;
+
+  @ApiProperty()
+  creationTime: Date;
+}
+
 export class ImageDto {
   @ApiProperty()
   id: string;
@@ -40,4 +65,13 @@ export class ImageDto {
 
   @ApiProperty()
   deletionTime: Date;
+
+  @ApiProperty()
+  isPublic: boolean;
+
+  @ApiProperty({ required: false })
+  externalId?: string;
+
+  @ApiProperty({ required: false })
+  tags?: Array<ImageTagDto>;
 }

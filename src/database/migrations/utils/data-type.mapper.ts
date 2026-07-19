@@ -19,7 +19,7 @@ const DATA_TYPES: Record<'timestamp' | 'boolean' | 'smallint', Record<'cockroach
 };
 
 export const getDataType = (driver: DatabaseType, dataType: keyof typeof DATA_TYPES) => {
-  if (driver !== 'cockroachdb' && driver !== 'postgres' && driver !== 'sqlite') {
+  if (driver !== 'cockroachdb' && driver !== 'postgres' && driver !== 'better-sqlite3') {
     throw new Error('unsupported database type');
   }
 

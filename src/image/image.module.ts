@@ -5,6 +5,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Image } from "../database/entities/image.entity.js";
 import { Slug } from "../database/entities/slug.entity.js";
 import { ImageCache } from "../database/entities/image-cache.entity.js";
+import { TagDefinition } from "../database/entities/tag-definition.entity.js";
+import { ImageTag } from "../database/entities/image-tag.entity.js";
 import { CacheModule } from "../cache/cache.module.js";
 
 @Module({
@@ -12,6 +14,8 @@ import { CacheModule } from "../cache/cache.module.js";
     TypeOrmModule.forFeature([Image]),
     TypeOrmModule.forFeature([Slug]),
     TypeOrmModule.forFeature([ImageCache]),
+    TypeOrmModule.forFeature([TagDefinition]),
+    TypeOrmModule.forFeature([ImageTag]),
     CacheModule,
   ],
   providers: [ImageService],

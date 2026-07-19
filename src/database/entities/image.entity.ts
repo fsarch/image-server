@@ -3,7 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
-  Generated,
+  Index,
   PrimaryColumn,
   PrimaryGeneratedColumn
 } from "typeorm"
@@ -47,6 +47,23 @@ export class Image {
     name: 'has_animation',
   })
   hasAnimation: boolean;
+
+  @Column({
+    name: 'is_public',
+    type: 'boolean',
+    default: true,
+  })
+  @Index()
+  isPublic: boolean;
+
+  @Column({
+    name: 'external_id',
+    type: 'varchar',
+    length: 2048,
+    nullable: true,
+  })
+  @Index()
+  externalId?: string;
 
   @CreateDateColumn({
     name: 'creation_time',

@@ -1,7 +1,7 @@
-import { ConflictException, Injectable, Inject } from '@nestjs/common';
+import { ConflictException, Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Request } from 'express';
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { Image } from "../../database/entities/image.entity.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -10,6 +10,9 @@ import { ConfigStorageType } from "../../types/config.type.js";
 import sharp, { FormatEnum } from "sharp";
 import crypto from 'node:crypto';
 import { Slug } from "../../database/entities/slug.entity.js";
+import { TagDefinition } from "../../database/entities/tag-definition.entity.js";
+import { ImageTag } from "../../database/entities/image-tag.entity.js";
+import { Visibility } from "../../constants/visibility.enum.js";
 import slugify from "slugify";
 import { getFormatInfoBySharpFormat } from "../../utils/format-info.utils.js";
 import type { IStorageProvider } from "../../storage/storage-provider.interface.js";
@@ -23,14 +26,52 @@ export class AdminImagesService {
     private imagesRepository: Repository<Image>,
     @InjectRepository(Slug)
     private slugsRepository: Repository<Slug>,
+    @InjectRepository(TagDefinition)
+    private tagDefinitionsRepository: Repository<TagDefinition>,
+    @InjectRepository(ImageTag)
+    private imageTagsRepository: Repository<ImageTag>,
     private readonly configService: ConfigService,
     @Inject(DATA_STORAGE_PROVIDER)
     private readonly dataStorage: IStorageProvider,
   ) {
   }
+  async list(filter?: { isPublic?: boolean; tags?: Array<{ key: string; value?: string }> }) {
+    const queryBuilder = this.imagesRepository.createQueryBuilder('image');
 
-  async list() {
-    return this.imagesRepository.find();
+    // Filter nach is_public
+    if (filter?.isPublic !== undefined) {
+      queryBuilder.andWhere('image.is_public = :isPublic', { isPublic: filter.isPublic });
+    }
+
+    // Filter nach Tags
+    if (filter?.tags && filter.tags.length > 0) {
+      queryBuilder
+        .leftJoin(ImageTag, 'image_tag', 'image_tag.image_id = image.id')
+        .leftJoin(TagDefinition, 'tag_def', 'tag_def.id = image_tag.tag_definition_id')
+        .andWhere(
+          filter.tags.map((tag, index) => {
+            const alias = `tag_${index}`;
+            return `(
+              EXISTS (
+                SELECT 1 FROM image_tag it_${index}
+                JOIN tag_definition td_${index} ON td_${index}.id = it_${index}.tag_definition_id
+                WHERE it_${index}.image_id = image.id
+                AND td_${index}.key = :key_${index}
+                ${tag.value ? `AND it_${index}.value = :value_${index}` : ''}
+              )
+            )`;
+          }).join(' AND '),
+        );
+
+      filter.tags.forEach((tag, index) => {
+        queryBuilder.setParameter(`key_${index}`, tag.key);
+        if (tag.value) {
+          queryBuilder.setParameter(`value_${index}`, tag.value);
+        }
+      });
+    }
+
+    return queryBuilder.getMany();
   }
 
   async remove(id: string) {
@@ -47,9 +88,15 @@ export class AdminImagesService {
     });
   }
 
-  async upload(request: Request, options: { path?: string; }) {
+  async upload(
+    request: Request,
+    options: { path?: string; visibility?: Visibility; externalId?: string; tags?: Array<{ key: string; value: string }> }
+  ) {
     const id = crypto.randomUUID();
     const creationTime = new Date(Date.now());
+
+    // Visibility: default to public
+    const isPublic = options.visibility === Visibility.private ? false : true;
 
     const slug = options?.path ? slugify.default(options.path, {
       remove: /[^\w\s$*_+~.()'"!\-:@\/]+/g,
@@ -98,6 +145,8 @@ export class AdminImagesService {
       height: metadata.height,
       md5: hashed,
       creationTime,
+      isPublic,
+      externalId: options.externalId,
     });
 
     const savedImage = await this.imagesRepository.save(createdImage);
@@ -109,10 +158,63 @@ export class AdminImagesService {
       });
     }
 
+    // Tags verarbeiten
+    if (options.tags && options.tags.length > 0) {
+      await this.processTagsForImage(savedImage, options.tags);
+    }
+
     return {
       id,
       slug,
     };
+  }
+
+  private async processTagsForImage(image: Image, tags: Array<{ key: string; value: string }>) {
+    // Tag-Keys validieren
+    const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
+    for (const tag of tags) {
+      if (!tagKeyRegex.test(tag.key)) {
+        throw new BadRequestException(`Invalid tag key: '${tag.key}'. Only alphanumeric, underscore and hyphen are allowed.`);
+      }
+    }
+
+    // Alle Tag-Definitionen abrufen oder erstellen
+    const tagKeys = tags.map(t => t.key);
+    const existingTagDefs = await this.tagDefinitionsRepository.find({
+      where: { key: In(tagKeys) },
+    });
+
+    const existingTagDefMap = new Map<string, TagDefinition>(
+      existingTagDefs.map(def => [def.key, def])
+    );
+
+    // Fehlende Tag-Definitionen erstellen
+    const newTagDefs: TagDefinition[] = [];
+    for (const tag of tags) {
+      if (!existingTagDefMap.has(tag.key)) {
+        const newDef = this.tagDefinitionsRepository.create({
+          key: tag.key,
+        });
+        newTagDefs.push(newDef);
+        existingTagDefMap.set(tag.key, newDef);
+      }
+    }
+
+    if (newTagDefs.length > 0) {
+      await this.tagDefinitionsRepository.save(newTagDefs);
+    }
+
+    // ImageTags erstellen
+    const imageTags = tags.map(tag => {
+      const tagDef = existingTagDefMap.get(tag.key)!;
+      return this.imageTagsRepository.create({
+        image: image,
+        tagDefinition: tagDef,
+        value: tag.value,
+      });
+    });
+
+    await this.imageTagsRepository.save(imageTags);
   }
 
   private async streamToBuffer(request: Request) {
@@ -142,5 +244,81 @@ export class AdminImagesService {
     }
     // For S3 or other storage, we use root path
     return '';
+  }
+
+  // Tag-Verwaltungsmethoden
+
+  async getTagDefinitions(): Promise<Array<TagDefinition>> {
+    return this.tagDefinitionsRepository.find();
+  }
+
+  async createTagDefinition(key: string, description?: string): Promise<TagDefinition> {
+    // Validierung
+    const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!tagKeyRegex.test(key)) {
+      throw new BadRequestException(`Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`);
+    }
+
+    // Prüfen ob Key bereits existiert
+    const existing = await this.tagDefinitionsRepository.findOne({
+      where: { key },
+    });
+    if (existing) {
+      throw new ConflictException(`Tag definition with key '${key}' already exists`);
+    }
+
+    const tagDef = this.tagDefinitionsRepository.create({
+      key,
+      description,
+    });
+
+    return this.tagDefinitionsRepository.save(tagDef);
+  }
+
+  async getTagsForImage(imageId: string): Promise<Array<ImageTag>> {
+    return this.imageTagsRepository.find({
+      where: { image: { id: imageId } },
+      relations: { tagDefinition: true },
+    });
+  }
+
+  async addTagToImage(imageId: string, key: string, value: string): Promise<ImageTag> {
+    const image = await this.imagesRepository.findOne({
+      where: { id: imageId },
+    });
+    if (!image) {
+      throw new ConflictException(`Image with id '${imageId}' not found`);
+    }
+
+    // Tag-Definition finden oder erstellen
+    let tagDef = await this.tagDefinitionsRepository.findOne({
+      where: { key },
+    });
+
+    if (!tagDef) {
+      // Validierung
+      const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
+      if (!tagKeyRegex.test(key)) {
+        throw new BadRequestException(`Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`);
+      }
+
+      tagDef = this.tagDefinitionsRepository.create({ key });
+      tagDef = await this.tagDefinitionsRepository.save(tagDef);
+    }
+
+    const imageTag = this.imageTagsRepository.create({
+      image: image,
+      tagDefinition: tagDef,
+      value,
+    });
+
+    return this.imageTagsRepository.save(imageTag);
+  }
+
+  async removeTagFromImage(imageId: string, tagId: string): Promise<void> {
+    await this.imageTagsRepository.delete({
+      id: tagId,
+      image: { id: imageId },
+    });
   }
 }

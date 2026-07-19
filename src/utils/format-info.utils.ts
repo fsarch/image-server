@@ -1,10 +1,10 @@
 import { FormatEnum } from "sharp";
 
-const FORMAT_INFO: Record<'jpeg' | 'png' | 'webp' | 'avif', { mimeType: string; extension: string; sharpFormat: keyof FormatEnum; }> = {
+const FORMAT_INFO: Record<'jpeg' | 'png' | 'webp' , { mimeType: string; extension: string; sharpFormat: keyof FormatEnum; }> = {
   jpeg: {
     mimeType: 'image/jpeg',
     extension: 'jpg',
-    sharpFormat: 'jpg',
+    sharpFormat: 'jpeg',
   },
   png: {
     mimeType: 'image/png',
@@ -16,16 +16,10 @@ const FORMAT_INFO: Record<'jpeg' | 'png' | 'webp' | 'avif', { mimeType: string; 
     extension: 'webp',
     sharpFormat: 'webp',
   },
-  avif: {
-    mimeType: 'image/avif',
-    extension: 'avif',
-    sharpFormat: 'avif',
-  },
 };
 
 export function getFormatInfoBySharpFormat(format: keyof FormatEnum) {
   switch (format) {
-    case 'jpg':
     case 'jpeg':
       return FORMAT_INFO.jpeg;
     case 'png':
@@ -58,8 +52,6 @@ export function getFormatInfoByMimeType(mimeType: string) {
       return FORMAT_INFO.png;
     case 'image/webp':
       return FORMAT_INFO.webp;
-    case 'image/avif':
-      return FORMAT_INFO.avif;
     default:
       throw new Error('unsupported mimeType');
   }

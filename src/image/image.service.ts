@@ -4,6 +4,8 @@ import { Image } from "../database/entities/image.entity.js";
 import { In, Repository } from "typeorm";
 import { Slug } from "../database/entities/slug.entity.js";
 import { ImageCache } from "../database/entities/image-cache.entity.js";
+import { TagDefinition } from "../database/entities/tag-definition.entity.js";
+import { ImageTag } from "../database/entities/image-tag.entity.js";
 import { ConfigService } from "@nestjs/config";
 import { ConfigImagePresetType } from "../types/config.type.js";
 import path, { dirname } from "node:path";
@@ -30,12 +32,20 @@ export class ImageService {
     private slugsRepository: Repository<Slug>,
     @InjectRepository(ImageCache)
     private imageCachesRepository: Repository<ImageCache>,
+    @InjectRepository(TagDefinition)
+    private tagDefinitionsRepository: Repository<TagDefinition>,
+    @InjectRepository(ImageTag)
+    private imageTagsRepository: Repository<ImageTag>,
     private readonly configService: ConfigService,
     @Inject(DATA_STORAGE_PROVIDER)
     private readonly dataStorage: IStorageProvider,
     @Inject(CACHE_STORAGE_PROVIDER)
     private readonly cacheStorage: IStorageProvider,
   ) {
+  }
+
+  async getImageById(id: string): Promise<Image | null> {
+    return this.imagesRepository.findOneBy({ id });
   }
 
   async resolveImage(options: {
@@ -71,6 +81,11 @@ export class ImageService {
     }
 
     if (!image) {
+      throw new NotFoundException();
+    }
+
+    // Prüfe ob Bild public ist (für non-admin Endpunkte)
+    if (!image.isPublic) {
       throw new NotFoundException();
     }
 
