@@ -7,7 +7,7 @@ export class AddImageMetadataAndTags1784408015000 implements MigrationInterface 
     public async up(queryRunner: QueryRunner): Promise<void> {
         const databaseType = queryRunner.connection.driver.options.type;
 
-        // 1. Neue Spalten zur image Tabelle hinzufügen
+        // 1. Add new columns to image table
         await queryRunner.addColumn('image', new TableColumn({
             name: 'is_public',
             type: getDataType(databaseType, 'boolean'),
@@ -22,7 +22,7 @@ export class AddImageMetadataAndTags1784408015000 implements MigrationInterface 
             isNullable: true,
         }));
 
-        // 2. Indizes für image Tabelle erstellen
+        // 2. Create indexes for image table
         await queryRunner.createIndex('image', new TableIndex({
             name: 'IDX_image_is_public',
             columnNames: ['is_public'],
@@ -33,7 +33,7 @@ export class AddImageMetadataAndTags1784408015000 implements MigrationInterface 
             columnNames: ['external_id'],
         }));
 
-        // 3. Neue Tabelle tag_definition erstellen
+        // 3. Create tag_definition table
         await queryRunner.createTable(new Table({
             name: 'tag_definition',
             columns: [{
@@ -64,7 +64,7 @@ export class AddImageMetadataAndTags1784408015000 implements MigrationInterface 
             }],
         }));
 
-        // 4. Neue Tabelle image_tag erstellen
+        // 4. Create image_tag table
         await queryRunner.createTable(new Table({
             name: 'image_tag',
             columns: [{

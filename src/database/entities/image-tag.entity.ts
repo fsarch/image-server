@@ -36,10 +36,10 @@ export class ImageTag {
   @CreateDateColumn({ name: 'creation_time' })
   creationTime: Date;
 
-  // Optional: Soft-Delete für Konsistenz
+  // Optional: Soft-delete for consistency
   // @DeleteDateColumn({ name: 'deletion_time' })
   // deletionTime?: Date;
 }
 
-// Wichtig: Es gibt KEINEN Unique Constraint auf (image_id, tag_definition_id),
-// da ein Tag mehrmals einem Bild mit unterschiedlichen Values hinzugefügt werden kann.
+// Important: There is NO unique constraint on (image_id, tag_definition_id)
+// because a tag can be added multiple times to an image with different values.

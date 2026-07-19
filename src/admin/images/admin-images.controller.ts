@@ -6,6 +6,7 @@ import { TagDefinition } from "../../database/entities/tag-definition.entity.js"
 import { ImageTag } from "../../database/entities/image-tag.entity.js";
 import { Visibility } from "../../constants/visibility.enum.js";
 import { ApiBearerAuth, ApiQuery, ApiTags, ApiParam, ApiBody } from "@nestjs/swagger";
+import { PaginationResultDto, ApiOkPaginatedResponse } from '@fsarch/server/pagination';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Slug } from "../../database/entities/slug.entity.js";
 import { Repository } from "typeorm";
@@ -40,47 +41,108 @@ export class AdminImagesController {
   @Get()
   @UseGuards(AuthGuard)
   @Roles(Role.manage_images)
+  @ApiOkPaginatedResponse(ImageDto)
   @ApiQuery({ name: 'embed', type: [String], isArray: true, required: false })
   @ApiQuery({ name: 'isPublic', type: Boolean, required: false })
-  @ApiQuery({ name: 'tagKey', type: [String], isArray: true, required: false })
-  @ApiQuery({ name: 'tagValue', type: [String], isArray: true, required: false })
+  @ApiQuery({ name: 'tag', type: [String], isArray: true, required: false })
+  @ApiQuery({ name: 'page', type: Number, required: false })
+  @ApiQuery({ name: 'limit', type: Number, required: false })
   public async getImages(
     @Query('embed') embed: Array<string>,
     @Query('isPublic') isPublic?: boolean,
-    @Query('tagKey') tagKeys?: string[],
-    @Query('tagValue') tagValues?: string[],
-  ): Promise<Array<Image>> {
-    const images = await this.adminImagesService.list({
-      isPublic,
-      tags: tagKeys?.map((key, i) => ({ key, value: tagValues?.[i] }))
-    }) as Array<ImageDto>;
+    @Query('tag') tags?: string[],
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 50,
+  ): Promise<PaginationResultDto<ImageDto>> {
+    // Parse tags: "color%3Dred" -> "color=red" -> { key: "color", value: "red" }
+    //               "size" -> { key: "size", value: undefined }
+    const parsedTags = tags?.map(tag => {
+      const decodedTag = decodeURIComponent(tag);
+      const [key, value] = decodedTag.split('=');
+      return { key: decodeURIComponent(key), value: value ? decodeURIComponent(value) : undefined };
+    });
 
-    if (embed?.includes('slugs')) {
-      await Promise.all(images.map(async (image) => {
+    const { data, total } = await this.adminImagesService.list({
+      isPublic,
+      tags: parsedTags,
+      page,
+      limit,
+    });
+
+    // Convert to DTO and embed if needed
+    const resultData: ImageDto[] = [];
+    for (const image of data) {
+      const dto: ImageDto = {
+        ...image,
+      };
+      
+      if (embed?.includes('slugs')) {
         const slugs = await this.slugsRepository.find({
           where: {
             image: image.id as unknown,
           },
         });
-
-        image.slugs = slugs.map((slug) => ({
+        dto.slugs = slugs.map((slug) => ({
           slug: slug.slug,
         }));
-      }));
-    }
+      }
 
-    if (embed?.includes('tags')) {
-      await Promise.all(images.map(async (image) => {
-        const tags = await this.adminImagesService.getTagsForImage(image.id);
-        image.tags = tags.map(tag => ({
+      if (embed?.includes('tags')) {
+        const imageTags = await this.adminImagesService.getTagsForImage(image.id);
+        dto.tags = imageTags.map(tag => ({
           id: tag.id,
           key: tag.tagDefinition.key,
           value: tag.value,
         }));
+      }
+      
+      resultData.push(dto);
+    }
+
+    const result = new PaginationResultDto<ImageDto>();
+    result.data = resultData;
+    result.metadata = {
+      currentPage: page,
+      pageSize: limit,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit)
+    };
+    return result;
+  }
+
+  @Get(':imageId')
+  @UseGuards(AuthGuard)
+  @Roles(Role.manage_images)
+  @ApiParam({ name: 'imageId', type: String, required: true })
+  @ApiQuery({ name: 'embed', type: [String], isArray: true, required: false })
+  public async getImage(
+    @Param('imageId') id: string,
+    @Query('embed') embed?: string[],
+  ): Promise<ImageDto> {
+    const image = await this.adminImagesService.getById(id);
+    if (!image) {
+      throw new NotFoundException();
+    }
+
+    const result: ImageDto = { ...image };
+
+    if (embed?.includes('tags')) {
+      const tags = await this.adminImagesService.getTagsForImage(id);
+      result.tags = tags.map(tag => ({
+        id: tag.id,
+        key: tag.tagDefinition.key,
+        value: tag.value,
       }));
     }
 
-    return images;
+    if (embed?.includes('slugs')) {
+      const slugs = await this.slugsRepository.find({
+        where: { image: id as unknown },
+      });
+      result.slugs = slugs.map(slug => ({ slug: slug.slug }));
+    }
+
+    return result;
   }
 
   @Get(':imageId/raw')
@@ -143,8 +205,8 @@ export class AdminImagesController {
       try {
         tags = JSON.parse(tagsHeader);
       } catch (e) {
-        // Ungültiges JSON - ignorieren oder Fehler werfen?
-        // Für jetzt: ignorieren
+        // Invalid JSON - ignore or throw error?
+        // For now: ignore
       }
     }
 

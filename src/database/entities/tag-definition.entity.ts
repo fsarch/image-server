@@ -15,5 +15,5 @@ export class TagDefinition {
   @CreateDateColumn({ name: 'creation_time' })
   creationTime: Date;
 
-  // KEIN deletion_time - Tag-Definitionen werden nicht gelöscht
+  // No deletion_time - Tag definitions are not deleted
 }

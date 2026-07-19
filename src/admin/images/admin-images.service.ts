@@ -35,35 +35,28 @@ export class AdminImagesService {
     private readonly dataStorage: IStorageProvider,
   ) {
   }
-  async list(filter?: { isPublic?: boolean; tags?: Array<{ key: string; value?: string }> }) {
+  async list(filter?: { isPublic?: boolean; tags?: Array<{ key: string; value?: string }>; page?: number; limit?: number }) {
     const queryBuilder = this.imagesRepository.createQueryBuilder('image');
 
-    // Filter nach is_public
+    // Filter by is_public
     if (filter?.isPublic !== undefined) {
       queryBuilder.andWhere('image.is_public = :isPublic', { isPublic: filter.isPublic });
     }
 
-    // Filter nach Tags
+    // Filter by tags
     if (filter?.tags && filter.tags.length > 0) {
-      queryBuilder
-        .leftJoin(ImageTag, 'image_tag', 'image_tag.image_id = image.id')
-        .leftJoin(TagDefinition, 'tag_def', 'tag_def.id = image_tag.tag_definition_id')
-        .andWhere(
-          filter.tags.map((tag, index) => {
-            const alias = `tag_${index}`;
-            return `(
-              EXISTS (
-                SELECT 1 FROM image_tag it_${index}
-                JOIN tag_definition td_${index} ON td_${index}.id = it_${index}.tag_definition_id
-                WHERE it_${index}.image_id = image.id
-                AND td_${index}.key = :key_${index}
-                ${tag.value ? `AND it_${index}.value = :value_${index}` : ''}
-              )
-            )`;
-          }).join(' AND '),
-        );
-
       filter.tags.forEach((tag, index) => {
+        queryBuilder.andWhere(
+          `(
+            EXISTS (
+              SELECT 1 FROM image_tag it_${index}
+              JOIN tag_definition td_${index} ON td_${index}.id = it_${index}.tag_definition_id
+              WHERE it_${index}.image_id = image.id
+              AND td_${index}.key = :key_${index}
+              ${tag.value ? `AND it_${index}.value = :value_${index}` : ''}
+            )
+          )`
+        );
         queryBuilder.setParameter(`key_${index}`, tag.key);
         if (tag.value) {
           queryBuilder.setParameter(`value_${index}`, tag.value);
@@ -71,7 +64,16 @@ export class AdminImagesService {
       });
     }
 
-    return queryBuilder.getMany();
+    // Pagination
+    const page = filter?.page ?? 1;
+    const limit = Math.min(filter?.limit ?? 50, 100); // Max 100 per page
+
+    const [data, total] = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return { data, total };
   }
 
   async remove(id: string) {
@@ -170,7 +172,7 @@ export class AdminImagesService {
   }
 
   private async processTagsForImage(image: Image, tags: Array<{ key: string; value: string }>) {
-    // Tag-Keys validieren
+    // Validate tag keys
     const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
     for (const tag of tags) {
       if (!tagKeyRegex.test(tag.key)) {
@@ -178,7 +180,7 @@ export class AdminImagesService {
       }
     }
 
-    // Alle Tag-Definitionen abrufen oder erstellen
+    // Get or create all tag definitions
     const tagKeys = tags.map(t => t.key);
     const existingTagDefs = await this.tagDefinitionsRepository.find({
       where: { key: In(tagKeys) },
@@ -188,7 +190,7 @@ export class AdminImagesService {
       existingTagDefs.map(def => [def.key, def])
     );
 
-    // Fehlende Tag-Definitionen erstellen
+    // Create missing tag definitions
     const newTagDefs: TagDefinition[] = [];
     for (const tag of tags) {
       if (!existingTagDefMap.has(tag.key)) {
@@ -204,7 +206,7 @@ export class AdminImagesService {
       await this.tagDefinitionsRepository.save(newTagDefs);
     }
 
-    // ImageTags erstellen
+    // Create image tags
     const imageTags = tags.map(tag => {
       const tagDef = existingTagDefMap.get(tag.key)!;
       return this.imageTagsRepository.create({
@@ -246,20 +248,20 @@ export class AdminImagesService {
     return '';
   }
 
-  // Tag-Verwaltungsmethoden
+  // Tag management methods
 
   async getTagDefinitions(): Promise<Array<TagDefinition>> {
     return this.tagDefinitionsRepository.find();
   }
 
   async createTagDefinition(key: string, description?: string): Promise<TagDefinition> {
-    // Validierung
+    // Validation
     const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
     if (!tagKeyRegex.test(key)) {
       throw new BadRequestException(`Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`);
     }
 
-    // Prüfen ob Key bereits existiert
+    // Check if key already exists
     const existing = await this.tagDefinitionsRepository.findOne({
       where: { key },
     });
@@ -290,13 +292,13 @@ export class AdminImagesService {
       throw new ConflictException(`Image with id '${imageId}' not found`);
     }
 
-    // Tag-Definition finden oder erstellen
+    // Find or create tag definition
     let tagDef = await this.tagDefinitionsRepository.findOne({
       where: { key },
     });
 
     if (!tagDef) {
-      // Validierung
+      // Validation
       const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
       if (!tagKeyRegex.test(key)) {
         throw new BadRequestException(`Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`);

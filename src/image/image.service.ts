@@ -84,7 +84,7 @@ export class ImageService {
       throw new NotFoundException();
     }
 
-    // Prüfe ob Bild public ist (für non-admin Endpunkte)
+    // Check if image is public (for non-admin endpoints)
     if (!image.isPublic) {
       throw new NotFoundException();
     }
