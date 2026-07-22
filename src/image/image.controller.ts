@@ -1,12 +1,11 @@
-import { Controller, Get, Headers, NotFoundException, Param, Req, Res, Inject } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Get, Headers, NotFoundException, Param, Req, Res, Inject, Logger } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import crypto from 'node:crypto';
 import { ConfigService } from "@nestjs/config";
 import { ConfigCachingClientType, ConfigNamingType } from "../types/config.type.js";
 import { ImageService, ResolveResponseType } from "./image.service.js";
 import { getFormatInfoByExtension, getFormatInfoByMimeType } from "../utils/format-info.utils.js";
 import sharp from "sharp";
-import fs from 'node:fs/promises';
 import { CacheService } from "../cache/cache.service.js";
 import { CacheType } from "../cache/cache.enum.js";
 import { runInBackground } from "../utils/run-in-background.utils.js";
@@ -14,6 +13,7 @@ import { ApiParam, ApiTags } from "@nestjs/swagger";
 import type { IStorageProvider } from "../storage/storage-provider.interface.js";
 import { DATA_STORAGE_PROVIDER, CACHE_STORAGE_PROVIDER } from "../storage/storage.module.js";
 import { Public } from "@fsarch/server/auth";
+import { SignedUrlService } from "../signed-url/signed-url.service.js";
 
 @ApiTags('images')
 @Controller({
@@ -21,10 +21,13 @@ import { Public } from "@fsarch/server/auth";
   version: '1',
 })
 export class ImageController {
+  private readonly logger = new Logger(ImageController.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly imageService: ImageService,
     private readonly cacheService: CacheService,
+    private readonly signedUrlService: SignedUrlService,
     @Inject(DATA_STORAGE_PROVIDER)
     private readonly dataStorage: IStorageProvider,
     @Inject(CACHE_STORAGE_PROVIDER)
@@ -135,6 +138,58 @@ export class ImageController {
     res.end();
   }
 
+  @Public()
+  @Get(':id/presets/:presetAlias')
+  @ApiParam({
+    name: 'id',
+    required: true,
+    format: 'path',
+  })
+  @ApiParam({
+    name: 'presetAlias',
+    required: true,
+    format: 'path',
+  })
+  public async getImageById(
+    @Req() req: Request,
+    @Headers() headers,
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Param('presetAlias') presetAlias: string,
+  ) {
+    const preferredMimeTypes = headers.accept.split(',').map(a => a.split(';')[0].trim());
+
+    // Check if the request has a valid signed URL (allows access to private images)
+    const isSignedUrlValid = this.signedUrlService.isRequestValid(req);
+    if (!isSignedUrlValid) {
+      this.logger.warn(`Invalid signed URL for image {id}`, {
+        id,
+      });
+    }
+
+    // Include signed URL validity in cache key to prevent cache poisoning
+    const cacheKeySuffix = isSignedUrlValid ? '_signed' : '';
+
+    let resolveInfo = await this.cacheService.getOrCreateCache(
+      CacheType.ResolvePath,
+      [id, '', presetAlias, preferredMimeTypes.join('_'), cacheKeySuffix],
+      async () => {
+        return await this.imageService.resolveImage({
+          presetAlias,
+          id,
+          preferredMimeTypes: preferredMimeTypes,
+          allowPrivate: isSignedUrlValid,
+        });
+      },
+      {
+        calculateSize: (value) => {
+          return JSON.stringify(value).length;
+        },
+      }
+    );
+
+    await this.getBaseImage(res, resolveInfo, preferredMimeTypes)
+  }
 
   @Public()
   @Get('resolve/*slug')
@@ -144,11 +199,11 @@ export class ImageController {
     format: 'path',
   })
   public async getImage(
+    @Req() req: Request,
     @Headers() headers,
     @Res() res: Response,
     @Param() params: { slug: Array<string> },
   ) {
-    console.log('params', params, params.slug[0]);
     const rawSlug = params.slug?.join('/');
 
     const namingOptions = this.configService.get<ConfigNamingType>('naming');
@@ -169,55 +224,28 @@ export class ImageController {
     const { slug, preset_alias: presetAlias, ext, id } = matchedSlug.groups;
     const preferredMimeTypes = ext ? [getFormatInfoByExtension(ext).mimeType] : headers.accept.split(',').map(a => a.split(';')[0].trim());
 
+    // Check if the request has a valid signed URL (allows access to private images)
+    const isSignedUrlValid = this.signedUrlService.isRequestValid(req);
+    if (!isSignedUrlValid) {
+      this.logger.warn(`Invalid signed URL for image {id}`, {
+        id,
+      });
+    }
+
+    // Include signed URL validity in cache key to prevent cache poisoning
+    // This ensures private images are only cached with valid signatures
+    const cacheKeySuffix = isSignedUrlValid ? '_signed' : '';
+
     let resolveInfo = await this.cacheService.getOrCreateCache(
       CacheType.ResolvePath,
-      [id, slug, presetAlias, preferredMimeTypes.join('_')],
+      [id, slug, presetAlias, preferredMimeTypes.join('_'), cacheKeySuffix],
       async () => {
         return await this.imageService.resolveImage({
           slug,
           presetAlias,
           id,
           preferredMimeTypes: preferredMimeTypes,
-        });
-      },
-      {
-        calculateSize: (value) => {
-          return JSON.stringify(value).length;
-        },
-      }
-    );
-
-    await this.getBaseImage(res, resolveInfo, preferredMimeTypes)
-  }
-
-  @Public()
-  @Get(':id/presets/:presetAlias')
-  @ApiParam({
-    name: 'id',
-    required: true,
-    format: 'path',
-  })
-  @ApiParam({
-    name: 'presetAlias',
-    required: true,
-    format: 'path',
-  })
-  public async getImageById(
-    @Headers() headers,
-    @Res() res: Response,
-    @Param('id') id: string,
-    @Param('presetAlias') presetAlias: string,
-  ) {
-    const preferredMimeTypes = headers.accept.split(',').map(a => a.split(';')[0].trim());
-
-    let resolveInfo = await this.cacheService.getOrCreateCache(
-      CacheType.ResolvePath,
-      [id, '', presetAlias, preferredMimeTypes.join('_')],
-      async () => {
-        return await this.imageService.resolveImage({
-          presetAlias,
-          id,
-          preferredMimeTypes: preferredMimeTypes,
+          allowPrivate: isSignedUrlValid,
         });
       },
       {

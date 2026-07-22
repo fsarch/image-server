@@ -1,9 +1,6 @@
 import { Controller, Get, Post, UseGuards, Headers, Req, Param, Query, Res, NotFoundException, Inject, Body, Delete } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AdminImagesService } from "./admin-images.service.js";
-import { Image } from "../../database/entities/image.entity.js";
-import { TagDefinition } from "../../database/entities/tag-definition.entity.js";
-import { ImageTag } from "../../database/entities/image-tag.entity.js";
 import { Visibility } from "../../constants/visibility.enum.js";
 import { ApiBearerAuth, ApiQuery, ApiTags, ApiParam, ApiBody } from "@nestjs/swagger";
 import { PaginationResultDto, ApiOkPaginatedResponse } from '@fsarch/server/pagination';
@@ -75,7 +72,7 @@ export class AdminImagesController {
       const dto: ImageDto = {
         ...image,
       };
-      
+
       if (embed?.includes('slugs')) {
         const slugs = await this.slugsRepository.find({
           where: {
@@ -95,7 +92,7 @@ export class AdminImagesController {
           value: tag.value,
         }));
       }
-      
+
       resultData.push(dto);
     }
 
@@ -187,17 +184,17 @@ export class AdminImagesController {
   @Roles(Role.manage_images)
   async createImage(@Headers() headers: Record<string, string | undefined>, @Req() request: Request) {
     const path = headers['x-path'] || headers['x-filename'];
-    
+
     // Visibility: x-visibility header (public|private), default: public
     let visibility: Visibility | undefined;
     const visibilityHeader = headers['x-visibility']?.toLowerCase();
     if (visibilityHeader === 'public' || visibilityHeader === 'private') {
       visibility = visibilityHeader as Visibility;
     }
-    
+
     // external_id: x-external-id header (optional)
     const externalId = headers['x-external-id'];
-    
+
     // tags: x-tags header (optional, JSON string)
     let tags: Array<{ key: string; value: string }> | undefined;
     const tagsHeader = headers['x-tags'];

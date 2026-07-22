@@ -123,6 +123,23 @@ const CONFIG_VALIDATION_SCHEMA = Joi.object({
       }),
     ),
   }),
+  signed_urls: Joi.object({
+    enabled: Joi.boolean().required(),
+    keys: Joi.array().items(
+      Joi.alternatives().try(
+        Joi.object({
+          id: Joi.string().required(),
+          algorithm: Joi.string().valid('HMAC-SHA256').required(),
+          secret: Joi.string().required(),
+        }),
+        Joi.object({
+          id: Joi.string().required(),
+          algorithm: Joi.string().valid('ED25519').required(),
+          publicKey: Joi.string().required(),
+        }),
+      ),
+    ).required(),
+  }),
 });
 
 export default () => {

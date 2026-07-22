@@ -11,7 +11,7 @@ export class ImageTag {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid', name: 'image_id' })
+  // @Column({ type: 'uuid', name: 'image_id' })
   @ManyToOne(() => Image, (image) => image.id, {
     nullable: false,
     onUpdate: 'CASCADE',
@@ -20,7 +20,7 @@ export class ImageTag {
   @JoinColumn({ name: 'image_id' })
   image: Image;
 
-  @Column({ type: 'uuid', name: 'tag_definition_id' })
+  // @Column({ type: 'uuid', name: 'tag_definition_id' })
   @ManyToOne(() => TagDefinition, (tagDef) => tagDef.id, {
     nullable: false,
     onUpdate: 'CASCADE',

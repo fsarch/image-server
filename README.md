@@ -12,6 +12,11 @@ A NestJS-based image server with support for image uploads, tagging, visibility 
 - **Caching**: Automatic caching of processed images
 - **Pagination**: Paginated API responses for image lists
 - **Admin API**: Full CRUD operations for images and tags
+- **Signed URLs**: Temporary access to private images via cryptographically signed URLs
+
+## Documentation
+
+- [Signed URLs Guide](./docs/signed-urls.md) - How to configure and use signed URLs for private image access
 
 ## Installation
 

@@ -35,10 +35,20 @@ image-server/
 │   │   ├── image.service.ts      # Image resolve logic
 │   │   └── image.module.ts       # Image module
 │   │
+│   ├── signed-url/               # Signed URL functionality
+│   │   ├── signed-url.module.ts  # Signed URL module
+│   │   └── signed-url.service.ts # Signed URL generation and validation
+│   │
 │   ├── cache/                    # Caching
 │   ├── storage/                  # Storage providers (FS, S3)
 │   ├── utils/                    # Utility functions
+│   │   └── signed-url.utils.ts  # Payload building, signing, verification
 │   └── types/                    # TypeScript types
+│
+└── docs/
+    ├── signed-urls.md            # Signed URLs documentation
+    ├── generate-signed-url-keys.js # Key generation script
+    └── sign-url.js               # URL signing script
 │
 └── package.json
 ```
@@ -114,6 +124,7 @@ image-server/
 - **Database:** `is_public: boolean` (default: true)
 - **Upload:** `x-visibility` header (public/private)
 - **Access Control:** Private images are not delivered in public endpoints (404)
+- **Signed URLs:** Private images can be accessed via signed URLs with valid `x-kid`, `x-expires`, `x-signature` parameters
 
 ### External ID
 - **Field:** `external_id: varchar(2048), nullable: true`
@@ -150,7 +161,7 @@ image-server/
 | GET | `/images/resolve/*slug` | Get image via slug |
 | GET | `/images/{id}/presets/{presetAlias}` | Get image with preset |
 
-**Security:** Both endpoints check `is_public` and do not deliver private images (404).
+**Security:** Both endpoints check `is_public` and do not deliver private images (404). **Exception:** Private images can be accessed with valid signed URL parameters (`x-kid`, `x-expires`, `x-signature`).
 
 ---
 
@@ -245,6 +256,7 @@ ImageTag Many────1 TagDefinition
 5. **Transactions:** Upload operations should be executed in a transaction
 6. **Validation:** Tag keys are validated before saving
 7. **Error Handling:** Clear error codes (400 for validation, 404 for not found, 409 for conflicts)
+8. **Documentation:** Any changes to signed URL signature generation or validation **MUST** be documented in `docs/signed-urls.md`
 
 ---
 
@@ -265,6 +277,12 @@ ImageTag Many────1 TagDefinition
 ## 📝 Changelog (Recent Changes)
 
 ### Added
+- **Signed URLs:** Temporary access to private images via cryptographically signed URLs with `x-kid`, `x-expires`, `x-signature` parameters
+- **Signed URL Utilities:** `buildSignaturePayload()`, `sign()`, `verify()` functions for manual URL generation
+- **Signed URL Service:** `SignedUrlService` for server-side generation and validation
+- **Signed URL Documentation:** Complete guide in `docs/signed-urls.md`
+- **Key Generation Script:** `docs/generate-signed-url-keys.js` for generating HMAC-SHA256 and ED25519 keys
+- **URL Signing Script:** `docs/sign-url.js` for signing URLs with existing keys (accepts complete URLs with query params, supports custom method)
 - **Visibility System:** `is_public` field with `x-visibility` header
 - **External ID:** `external_id` field with `x-external-id` header
 - **Tag System:** Predefined tags with `tag_definition` and `image_tag` tables
@@ -274,10 +292,12 @@ ImageTag Many────1 TagDefinition
 - **Embed Tags:** `embed=tags` for list and single endpoints
 
 ### Changed
+- **Config Types:** Added `signed_urls` configuration with `ConfigSignedUrlsType` and `ConfigSignedUrlKeyType`
 - **Image Entity:** Two new fields (`is_public`, `external_id`) with indexes
 - **Upload Logic:** Extended with visibility, external ID and tags
 - **List Endpoint:** Now with pagination and tag filtering
 - **Database:** New tables and indexes
+- **Image Service:** Added `allowPrivate` option to `resolveImage()` for signed URL access
 
 ---
 

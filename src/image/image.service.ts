@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, NotImplementedException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, NotImplementedException, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Image } from "../database/entities/image.entity.js";
 import { In, Repository } from "typeorm";
@@ -25,6 +25,8 @@ export type ResolveResponseType = {
 
 @Injectable()
 export class ImageService {
+  private readonly logger = new Logger(ImageService.name);
+
   constructor(
     @InjectRepository(Image)
     private imagesRepository: Repository<Image>,
@@ -52,13 +54,21 @@ export class ImageService {
     slug?: string;
     id?: string;
     presetAlias: string;
-    preferredMimeTypes: Array<string>
+    preferredMimeTypes: Array<string>;
+    /**
+     * Allow access to private images when true.
+     * This should only be set when the request has a valid signed URL signature.
+     */
+    allowPrivate?: boolean;
   }): Promise<ResolveResponseType> {
     let image: Image | undefined;
 
     const presets = this.configService.get<Array<ConfigImagePresetType>>('images.presets');
     const preset = presets.find((p) => options.presetAlias === p.alias);
     if (!preset) {
+      this.logger.warn(`Invalid image preset alias: {presetAlias}`, {
+        presetAlias: options.presetAlias,
+      });
       throw new NotFoundException();
     }
 
@@ -81,11 +91,16 @@ export class ImageService {
     }
 
     if (!image) {
+      this.logger.warn(`Image not found for slug: {slug} or id: {id}`, {
+        slug: options.slug,
+        id: options.id,
+      });
       throw new NotFoundException();
     }
 
     // Check if image is public (for non-admin endpoints)
-    if (!image.isPublic) {
+    // Allow access if explicitly permitted (e.g., via signed URL)
+    if (!image.isPublic && !options.allowPrivate) {
       throw new NotFoundException();
     }
 

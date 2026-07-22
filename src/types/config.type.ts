@@ -11,6 +11,30 @@ enum ImageConversion {
   on_demand = 'on_demand',
 }
 
+export enum SignedUrlAlgorithm {
+  HMAC_SHA256 = 'HMAC-SHA256',
+  ED25519 = 'ED25519',
+}
+
+export type ConfigSignedUrlKeyType = {
+  id: string;
+  algorithm: SignedUrlAlgorithm;
+} & (
+  | {
+      algorithm: SignedUrlAlgorithm.HMAC_SHA256;
+      secret: string;
+    }
+  | {
+      algorithm: SignedUrlAlgorithm.ED25519;
+      publicKey: string;
+    }
+);
+
+export type ConfigSignedUrlsType = {
+  enabled: boolean;
+  keys: Array<ConfigSignedUrlKeyType>;
+};
+
 export type ConfigType = {
   auth: ConfigAuthType;
   uac: ConfigStaticUacType;
@@ -19,6 +43,7 @@ export type ConfigType = {
   storage: ConfigStorageType;
   naming: ConfigNamingType;
   caching: ConfigCachingType;
+  signed_urls?: ConfigSignedUrlsType;
 };
 
 type ConfigAuthType = ConfigStaticAuthType;

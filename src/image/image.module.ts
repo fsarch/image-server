@@ -8,6 +8,7 @@ import { ImageCache } from "../database/entities/image-cache.entity.js";
 import { TagDefinition } from "../database/entities/tag-definition.entity.js";
 import { ImageTag } from "../database/entities/image-tag.entity.js";
 import { CacheModule } from "../cache/cache.module.js";
+import { SignedUrlModule } from "../signed-url/signed-url.module.js";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { CacheModule } from "../cache/cache.module.js";
     TypeOrmModule.forFeature([TagDefinition]),
     TypeOrmModule.forFeature([ImageTag]),
     CacheModule,
+    SignedUrlModule,
   ],
   providers: [ImageService],
   exports: [ImageService],
