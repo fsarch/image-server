@@ -4,16 +4,24 @@ import crypto from 'node:crypto';
 import { ConfigService } from "@nestjs/config";
 import { ConfigCachingClientType, ConfigNamingType } from "../types/config.type.js";
 import { ImageService, ResolveResponseType } from "./image.service.js";
+import { ApiHeader, ApiConsumes } from "@nestjs/swagger";
 import { getFormatInfoByExtension, getFormatInfoByMimeType } from "../utils/format-info.utils.js";
 import sharp from "sharp";
 import { CacheService } from "../cache/cache.service.js";
 import { CacheType } from "../cache/cache.enum.js";
 import { runInBackground } from "../utils/run-in-background.utils.js";
-import { ApiParam, ApiTags } from "@nestjs/swagger";
+import { ApiParam, ApiTags, ApiQuery } from "@nestjs/swagger";
 import type { IStorageProvider } from "../storage/storage-provider.interface.js";
 import { DATA_STORAGE_PROVIDER, CACHE_STORAGE_PROVIDER } from "../storage/storage.module.js";
 import { Public } from "@fsarch/server/auth";
 import { SignedUrlService } from "../signed-url/signed-url.service.js";
+
+interface ImageRequestHeaders {
+  accept: string;
+  authorization?: string;
+  'x-signature'?: string;
+  'x-expires'?: string;
+};
 
 @ApiTags('images')
 @Controller({
@@ -150,9 +158,39 @@ export class ImageController {
     required: true,
     format: 'path',
   })
+  @ApiQuery({
+    name: 'x-kid',
+    description: 'Key ID for signed URL validation',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'x-expires',
+    description: 'Expiration timestamp for signed URL (milliseconds since epoch)',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'x-signature',
+    description: 'Cryptographic signature for signed URL validation',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiHeader({
+    name: 'Accept',
+    description: 'Preferred MIME types (comma-separated)',
+    required: false,
+    schema: { type: 'string', example: 'image/webp,image/png' },
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token for signed URLs (private images)',
+    required: false,
+    schema: { type: 'string' },
+  })
   public async getImageById(
     @Req() req: Request,
-    @Headers() headers,
+    @Headers() headers: ImageRequestHeaders,
     @Res() res: Response,
     @Param('id') id: string,
     @Param('presetAlias') presetAlias: string,
@@ -198,9 +236,39 @@ export class ImageController {
     required: true,
     format: 'path',
   })
+  @ApiQuery({
+    name: 'x-kid',
+    description: 'Key ID for signed URL validation',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'x-expires',
+    description: 'Expiration timestamp for signed URL (milliseconds since epoch)',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiQuery({
+    name: 'x-signature',
+    description: 'Cryptographic signature for signed URL validation',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiHeader({
+    name: 'Accept',
+    description: 'Preferred MIME types (comma-separated)',
+    required: false,
+    schema: { type: 'string', example: 'image/webp,image/png' },
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token for signed URLs (private images)',
+    required: false,
+    schema: { type: 'string' },
+  })
   public async getImage(
     @Req() req: Request,
-    @Headers() headers,
+    @Headers() headers: ImageRequestHeaders,
     @Res() res: Response,
     @Param() params: { slug: Array<string> },
   ) {
