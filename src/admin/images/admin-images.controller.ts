@@ -12,6 +12,7 @@ import {
   Inject,
   Body,
   Delete,
+  Patch,
   ParseBoolPipe,
   ParseIntPipe
 } from '@nestjs/common';
@@ -23,7 +24,7 @@ import { PaginationResultDto, ApiOkPaginatedResponse } from '@fsarch/server/pagi
 import { InjectRepository } from "@nestjs/typeorm";
 import { Slug } from "../../database/entities/slug.entity.js";
 import { Repository } from "typeorm";
-import { ImageDto, ImageTagDto, TagDefinitionDto } from "../../models/image.model.js";
+import { ImageDto, ImageTagDto, TagDefinitionDto, PatchImageDto, ImageTagInputDto } from "../../models/image.model.js";
 import path from "node:path";
 import { getFormatInfoByMimeType } from "../../utils/format-info.utils.js";
 import { ImageService } from "../../image/image.service.js";
@@ -212,7 +213,7 @@ export class AdminImagesController {
     const externalId = headers['x-external-id'];
 
     // tags: x-tags header (optional, JSON string)
-    let tags: Array<{ key: string; value: string }> | undefined;
+    let tags: ImageTagInputDto[] | undefined;
     const tagsHeader = headers['x-tags'];
     if (tagsHeader) {
       try {
@@ -288,10 +289,10 @@ export class AdminImagesController {
   @UseGuards(AuthGuard)
   @Roles(Role.manage_images)
   @ApiParam({ name: 'imageId', type: String, required: true })
-  @ApiBody({ type: Object, description: 'Tag with key and value' })
+  @ApiBody({ type: ImageTagInputDto, description: 'Tag with key and value' })
   public async addImageTag(
     @Param('imageId') imageId: string,
-    @Body() body: { key: string; value: string }
+    @Body() body: ImageTagInputDto
   ): Promise<ImageTagDto> {
     const tag = await this.adminImagesService.addTagToImage(
       imageId,
@@ -332,5 +333,33 @@ export class AdminImagesController {
     }
 
     await this.adminImagesService.remove(image.id);
+  }
+
+  @Patch(':imageId')
+  @UseGuards(AuthGuard)
+  @Roles(Role.manage_images)
+  @ApiParam({ name: 'imageId', type: String, required: true })
+  @ApiBody({ type: PatchImageDto })
+  public async patchImage(
+    @Param('imageId') id: string,
+    @Body() body: PatchImageDto,
+  ): Promise<ImageDto> {
+    const image = await this.adminImagesService.getById(id);
+    if (!image) {
+      throw new NotFoundException();
+    }
+
+    // Visibility aktualisieren falls im Body enthalten
+    if (body.isPublic !== undefined) {
+      await this.adminImagesService.updateImageVisibility(id, body.isPublic);
+    }
+
+    // Tags aktualisieren falls im Body enthalten
+    if (body.tags !== undefined) {
+      await this.adminImagesService.setImageTags(id, body.tags);
+    }
+
+    // Aktualisiertes Bild zurückgeben
+    return { ...(await this.adminImagesService.getById(id)) };
   }
 }

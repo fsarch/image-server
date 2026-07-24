@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Request } from 'express';
 import { In, Repository } from "typeorm";
 import { Image } from "../../database/entities/image.entity.js";
+import { ImageTagInputDto } from "../../models/image.model.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ConfigService } from "@nestjs/config";
@@ -95,7 +96,7 @@ export class AdminImagesService {
 
   async upload(
     request: Request,
-    options: { path?: string; visibility?: Visibility; externalId?: string; tags?: Array<{ key: string; value: string }> }
+    options: { path?: string; visibility?: Visibility; externalId?: string; tags?: ImageTagInputDto[] }
   ) {
     const id = crypto.randomUUID();
     const creationTime = new Date(Date.now());
@@ -174,7 +175,7 @@ export class AdminImagesService {
     };
   }
 
-  private async processTagsForImage(image: Image, tags: Array<{ key: string; value: string }>) {
+  private async processTagsForImage(image: Image, tags: ImageTagInputDto[]) {
     // Validate tag keys
     const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
     for (const tag of tags) {
@@ -325,5 +326,36 @@ export class AdminImagesService {
       id: tagId,
       image: { id: imageId },
     });
+  }
+
+  async updateImageVisibility(imageId: string, isPublic: boolean): Promise<Image> {
+    const image = await this.imagesRepository.findOne({
+      where: { id: imageId },
+    });
+    if (!image) {
+      throw new ConflictException(`Image with id '${imageId}' not found`);
+    }
+
+    image.isPublic = isPublic;
+    return this.imagesRepository.save(image);
+  }
+
+  async setImageTags(imageId: string, tags: ImageTagInputDto[]): Promise<void> {
+    const image = await this.imagesRepository.findOne({
+      where: { id: imageId },
+    });
+    if (!image) {
+      throw new ConflictException(`Image with id '${imageId}' not found`);
+    }
+
+    // Existing tags löschen
+    await this.imageTagsRepository.delete({
+      image: { id: imageId },
+    });
+
+    // Neue Tags hinzufügen
+    if (tags && tags.length > 0) {
+      await this.processTagsForImage(image, tags);
+    }
   }
 }

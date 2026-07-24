@@ -75,3 +75,19 @@ export class ImageDto {
   @ApiProperty({ required: false })
   tags?: Array<ImageTagDto>;
 }
+
+export class ImageTagInputDto {
+  @ApiProperty()
+  key: string;
+
+  @ApiProperty({ required: false })
+  value?: string;
+}
+
+export class PatchImageDto {
+  @ApiProperty({ required: false })
+  isPublic?: boolean;
+
+  @ApiProperty({ required: false, type: [ImageTagInputDto] })
+  tags?: ImageTagInputDto[];
+}
