@@ -49,7 +49,6 @@ image-server/
     ├── signed-urls.md            # Signed URLs documentation
     ├── generate-signed-url-keys.js # Key generation script
     └── sign-url.js               # URL signing script
-│
 └── package.json
 ```
 
