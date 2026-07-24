@@ -30,6 +30,14 @@ export class TagDefinitionDto {
   creationTime: Date;
 }
 
+export class CreateTagDefinitionDto {
+  @ApiProperty()
+  key: string;
+
+  @ApiProperty({ required: false })
+  description?: string;
+}
+
 export class ImageDto {
   @ApiProperty()
   id: string;

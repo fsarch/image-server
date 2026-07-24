@@ -19,12 +19,12 @@ import {
 import type { Request, Response } from 'express';
 import { AdminImagesService } from "./admin-images.service.js";
 import { Visibility } from "../../constants/visibility.enum.js";
-import { ApiBearerAuth, ApiQuery, ApiTags, ApiParam, ApiBody } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiQuery, ApiTags, ApiParam, ApiBody, ApiConsumes, ApiHeader } from "@nestjs/swagger";
 import { PaginationResultDto, ApiOkPaginatedResponse } from '@fsarch/server/pagination';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Slug } from "../../database/entities/slug.entity.js";
 import { Repository } from "typeorm";
-import { ImageDto, ImageTagDto, TagDefinitionDto, PatchImageDto, ImageTagInputDto } from "../../models/image.model.js";
+import { ImageDto, ImageTagDto, TagDefinitionDto, PatchImageDto, ImageTagInputDto, CreateTagDefinitionDto } from "../../models/image.model.js";
 import path from "node:path";
 import { getFormatInfoByMimeType } from "../../utils/format-info.utils.js";
 import { ImageService } from "../../image/image.service.js";
@@ -199,6 +199,38 @@ export class AdminImagesController {
   @Post('/_actions/upload')
   @UseGuards(AuthGuard)
   @Roles(Role.manage_images)
+  @ApiConsumes('application/octet-stream', 'image/*')
+  @ApiHeader({
+    name: 'x-path',
+    description: 'Path or filename for the image',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiHeader({
+    name: 'x-filename',
+    description: 'Alternative to x-path: filename for the image',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiHeader({
+    name: 'x-visibility',
+    description: 'Image visibility',
+    required: false,
+    schema: { type: 'string', enum: ['public', 'private'], default: 'public' },
+  })
+  @ApiHeader({
+    name: 'x-external-id',
+    description: 'Optional external ID reference',
+    required: false,
+    schema: { type: 'string' },
+  })
+  @ApiHeader({
+    name: 'x-tags',
+    description: 'JSON array of tags: [{"key": "color", "value": "red"}]',
+    required: false,
+    schema: { type: 'string', example: '[{"key": "color", "value": "red"}]' },
+  })
+  @ApiBody({ description: 'Raw image file content (binary)' })
   async createImage(@Headers() headers: Record<string, string | undefined>, @Req() request: Request) {
     const path = headers['x-path'] || headers['x-filename'];
 
@@ -252,9 +284,9 @@ export class AdminImagesController {
   @Post('tags/definitions')
   @UseGuards(AuthGuard)
   @Roles(Role.manage_images)
-  @ApiBody({ type: Object, description: 'Tag definition with key and optional description' })
+  @ApiBody({ type: CreateTagDefinitionDto, description: 'Tag definition with key and optional description' })
   public async createTagDefinition(
-    @Body() body: { key: string; description?: string }
+    @Body() body: CreateTagDefinitionDto
   ): Promise<TagDefinitionDto> {
     const tagDef = await this.adminImagesService.createTagDefinition(
       body.key,
