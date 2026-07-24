@@ -1,4 +1,20 @@
-import { Controller, Get, Post, UseGuards, Headers, Req, Param, Query, Res, NotFoundException, Inject, Body, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Headers,
+  Req,
+  Param,
+  Query,
+  Res,
+  NotFoundException,
+  Inject,
+  Body,
+  Delete,
+  ParseBoolPipe,
+  ParseIntPipe
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AdminImagesService } from "./admin-images.service.js";
 import { Visibility } from "../../constants/visibility.enum.js";
@@ -46,10 +62,10 @@ export class AdminImagesController {
   @ApiQuery({ name: 'limit', type: Number, required: false })
   public async getImages(
     @Query('embed') embed: Array<string>,
-    @Query('isPublic') isPublic?: boolean,
+    @Query('isPublic', new ParseBoolPipe({ optional: true })) isPublic?: boolean,
     @Query('tag') tags?: string[],
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 50,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 50,
   ): Promise<PaginationResultDto<ImageDto>> {
     // Parse tags: "color%3Dred" -> "color=red" -> { key: "color", value: "red" }
     //               "size" -> { key: "size", value: undefined }

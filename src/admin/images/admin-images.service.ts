@@ -40,7 +40,10 @@ export class AdminImagesService {
 
     // Filter by is_public
     if (filter?.isPublic !== undefined) {
-      queryBuilder.andWhere('image.is_public = :isPublic', { isPublic: filter.isPublic });
+      queryBuilder.andWhere('image.is_public = :isPublic', {
+        // isPublic: queryBuilder.dataSource.options.type === 'better-sqlite3' ? filter.isPublic ? 1 : 0 : filter.isPublic,
+        isPublic: filter.isPublic,
+      });
     }
 
     // Filter by tags
