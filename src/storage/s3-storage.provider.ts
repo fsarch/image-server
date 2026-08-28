@@ -78,7 +78,8 @@ export class S3StorageProvider implements IStorageProvider {
       await this.client.send(command);
       return true;
     } catch (error) {
-      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
         return false;
       }
       throw error;
