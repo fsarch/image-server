@@ -37,6 +37,7 @@ RUN npm run build
 FROM base
 
 ENV NODE_ENV production
+ENV NODE_OPTIONS="--import @fsarch/server/register"
 
 EXPOSE 8080
 
