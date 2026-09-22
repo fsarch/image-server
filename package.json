@@ -25,10 +25,10 @@
     "postversion": "git push && git push --tags"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1137.0",
+    "@aws-sdk/client-s3": "^3.1138.0",
     "@fsarch/server": "^0.3.3",
     "@nestjs/common": "^12.0.4",
-    "@nestjs/config": "^12.0.0",
+    "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.4",
     "@nestjs/jwt": "^12.0.2",
     "@nestjs/platform-express": "^12.0.4",
@@ -48,7 +48,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
-    "@nestjs/cli": "^12.0.3",
     "@nestjs/schematics": "^12.0.4",
     "@nestjs/testing": "^12.0.4",
     "@swc/core": "^1.16.2",
