@@ -58,6 +58,13 @@ jobs:
             echo "stable=false" >> "$GITHUB_OUTPUT"
           fi
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          # Same tags, "-distroless" suffixed, for the Dockerfile.distroless
+          # build below (e.g. fsarch/image-server:1.2.3-distroless).
+          DISTROLESS_TAGS=""
+          for tag in ${TAGS}; do
+            DISTROLESS_TAGS="${DISTROLESS_TAGS} ${tag}-distroless"
+          done
+          echo "distroless_tags=${DISTROLESS_TAGS}" >> "$GITHUB_OUTPUT"
       - name: build the image
         run: |
           TAG_ARGS=""
@@ -68,6 +75,18 @@ jobs:
           docker buildx build \
             ${TAG_ARGS} \
             --platform linux/amd64,linux/arm64 \
+            --push .
+      - name: build the distroless image
+        run: |
+          TAG_ARGS=""
+          for tag in ${{ steps.image.outputs.distroless_tags }}; do
+            TAG_ARGS="${TAG_ARGS} --tag ${tag}"
+          done
+
+          docker buildx build \
+            ${TAG_ARGS} \
+            --platform linux/amd64,linux/arm64 \
+            --file Dockerfile.distroless \
             --push .
       - name: notify helm-charts of the new release
         # success() is required here because a custom `if:` replaces the
