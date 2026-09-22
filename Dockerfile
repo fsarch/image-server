@@ -16,7 +16,7 @@ FROM base AS deps
 ENV NODE_ENV production
 
 RUN apt-get update && \
-    apt-get install -y node-gyp && \
+    apt-get install -y --no-install-recommends node-gyp build-essential python3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 RUN pnpm install --frozen-lockfile --prod
@@ -26,7 +26,7 @@ RUN pnpm install --frozen-lockfile --prod
 FROM base AS builder
 
 RUN apt-get update && \
-    apt-get install -y node-gyp && \
+    apt-get install -y --no-install-recommends node-gyp build-essential python3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 RUN pnpm install --frozen-lockfile
