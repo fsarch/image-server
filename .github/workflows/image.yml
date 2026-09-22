@@ -77,6 +77,10 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --push .
       - name: build the distroless image
+        # Only for tagged releases, not every push to main (no :latest
+        # counterpart - avoids doubling the build for the mainline "just
+        # verify it still builds/pushes" case).
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           TAG_ARGS=""
           for tag in ${{ steps.image.outputs.distroless_tags }}; do
