@@ -49,4 +49,3 @@ COPY --from=deps --chown=node:node /usr/src/app/node_modules ./node_modules
 USER node
 
 CMD ["node", "./dist/main.js"]
-
