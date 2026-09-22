@@ -1,39 +1,57 @@
+import path from 'node:path';
+import { AuthGuard } from '@fsarch/server/auth';
 import {
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-  Headers,
-  Req,
-  Param,
-  Query,
-  Res,
-  NotFoundException,
-  Inject,
+  ApiOkPaginatedResponse,
+  PaginationResultDto,
+} from '@fsarch/server/pagination';
+import { Roles } from '@fsarch/server/uac';
+import {
   Body,
+  Controller,
   Delete,
-  Patch,
+  Get,
+  Headers,
+  Inject,
+  NotFoundException,
+  Param,
   ParseBoolPipe,
-  ParseIntPipe
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiHeader,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { InjectRepository } from '@nestjs/typeorm';
 import type { Request, Response } from 'express';
-import { AdminImagesService } from "./admin-images.service.js";
-import { Visibility } from "../../constants/visibility.enum.js";
-import { ApiBearerAuth, ApiQuery, ApiTags, ApiParam, ApiBody, ApiConsumes, ApiHeader } from "@nestjs/swagger";
-import { PaginationResultDto, ApiOkPaginatedResponse } from '@fsarch/server/pagination';
-import { InjectRepository } from "@nestjs/typeorm";
-import { Slug } from "../../database/entities/slug.entity.js";
-import { Repository } from "typeorm";
-import { ImageDto, ImageTagDto, TagDefinitionDto, PatchImageDto, ImageTagInputDto, CreateTagDefinitionDto } from "../../models/image.model.js";
-import path from "node:path";
-import { getFormatInfoByMimeType } from "../../utils/format-info.utils.js";
-import { ImageService } from "../../image/image.service.js";
-import sharp from "sharp";
-import type { IStorageProvider } from "../../storage/storage-provider.interface.js";
-import { DATA_STORAGE_PROVIDER } from "../../storage/storage.module.js";
-import { AuthGuard } from "@fsarch/server/auth";
-import { Roles } from "@fsarch/server/uac";
-import { Role } from "../../constants/role.enum.js";
+import sharp from 'sharp';
+import type { Repository } from 'typeorm';
+import { Role } from '../../constants/role.enum.js';
+import type { Visibility } from '../../constants/visibility.enum.js';
+import { Slug } from '../../database/entities/slug.entity.js';
+import { ImageService } from '../../image/image.service.js';
+import {
+  CreateTagDefinitionDto,
+  ImageDto,
+  type ImageTagDto,
+  ImageTagInputDto,
+  PatchImageDto,
+  type TagDefinitionDto,
+} from '../../models/image.model.js';
+import { DATA_STORAGE_PROVIDER } from '../../storage/storage.module.js';
+import type { IStorageProvider } from '../../storage/storage-provider.interface.js';
+import { getFormatInfoByMimeType } from '../../utils/format-info.utils.js';
+import { AdminImagesService } from './admin-images.service.js';
 
 @ApiTags('admin')
 @Controller({
@@ -49,8 +67,7 @@ export class AdminImagesController {
     private readonly imageService: ImageService,
     @Inject(DATA_STORAGE_PROVIDER)
     private readonly dataStorage: IStorageProvider,
-  ) {
-  }
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard)
@@ -63,17 +80,21 @@ export class AdminImagesController {
   @ApiQuery({ name: 'limit', type: Number, required: false })
   public async getImages(
     @Query('embed') embed: Array<string>,
-    @Query('isPublic', new ParseBoolPipe({ optional: true })) isPublic?: boolean,
+    @Query('isPublic', new ParseBoolPipe({ optional: true }))
+    isPublic?: boolean,
     @Query('tag') tags?: string[],
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 50,
   ): Promise<PaginationResultDto<ImageDto>> {
     // Parse tags: "color%3Dred" -> "color=red" -> { key: "color", value: "red" }
     //               "size" -> { key: "size", value: undefined }
-    const parsedTags = tags?.map(tag => {
+    const parsedTags = tags?.map((tag) => {
       const decodedTag = decodeURIComponent(tag);
       const [key, value] = decodedTag.split('=');
-      return { key: decodeURIComponent(key), value: value ? decodeURIComponent(value) : undefined };
+      return {
+        key: decodeURIComponent(key),
+        value: value ? decodeURIComponent(value) : undefined,
+      };
     });
 
     const { data, total } = await this.adminImagesService.list({
@@ -102,8 +123,10 @@ export class AdminImagesController {
       }
 
       if (embed?.includes('tags')) {
-        const imageTags = await this.adminImagesService.getTagsForImage(image.id);
-        dto.tags = imageTags.map(tag => ({
+        const imageTags = await this.adminImagesService.getTagsForImage(
+          image.id,
+        );
+        dto.tags = imageTags.map((tag) => ({
           id: tag.id,
           key: tag.tagDefinition.key,
           value: tag.value,
@@ -119,7 +142,7 @@ export class AdminImagesController {
       currentPage: page,
       pageSize: limit,
       totalItems: total,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
     return result;
   }
@@ -142,7 +165,7 @@ export class AdminImagesController {
 
     if (embed?.includes('tags')) {
       const tags = await this.adminImagesService.getTagsForImage(id);
-      result.tags = tags.map(tag => ({
+      result.tags = tags.map((tag) => ({
         id: tag.id,
         key: tag.tagDefinition.key,
         value: tag.value,
@@ -153,7 +176,7 @@ export class AdminImagesController {
       const slugs = await this.slugsRepository.find({
         where: { image: id as unknown },
       });
-      result.slugs = slugs.map(slug => ({ slug: slug.slug }));
+      result.slugs = slugs.map((slug) => ({ slug: slug.slug }));
     }
 
     return result;
@@ -169,21 +192,27 @@ export class AdminImagesController {
   ): Promise<void> {
     const image = await this.adminImagesService.getById(id);
 
-    const filePath = path.join(this.imageService.getImageDirectory(image.creationTime), `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`);
+    const filePath = path.join(
+      this.imageService.getImageDirectory(image.creationTime),
+      `${image.id}.${getFormatInfoByMimeType(image.mimeType).extension}`,
+    );
 
-    let fileContent: Uint8Array = new Uint8Array(await this.dataStorage.readFile(filePath));
+    let fileContent: Uint8Array = new Uint8Array(
+      await this.dataStorage.readFile(filePath),
+    );
 
     if (size && !isNaN(parseInt(size, 10))) {
       const sizeNumber = parseInt(size, 10);
 
-      fileContent = new Uint8Array(await sharp(fileContent)
-        .resize({
-          width: sizeNumber,
-          height: sizeNumber,
-          fit: 'cover',
-        })
-        .toFormat(getFormatInfoByMimeType('image/png')?.sharpFormat)
-        .toBuffer()
+      fileContent = new Uint8Array(
+        await sharp(fileContent)
+          .resize({
+            width: sizeNumber,
+            height: sizeNumber,
+            fit: 'cover',
+          })
+          .toFormat(getFormatInfoByMimeType('image/png')?.sharpFormat)
+          .toBuffer(),
       );
     }
 
@@ -231,7 +260,10 @@ export class AdminImagesController {
     schema: { type: 'string', example: '[{"key": "color", "value": "red"}]' },
   })
   @ApiBody({ description: 'Raw image file content (binary)' })
-  async createImage(@Headers() headers: Record<string, string | undefined>, @Req() request: Request) {
+  async createImage(
+    @Headers() headers: Record<string, string | undefined>,
+    @Req() request: Request,
+  ) {
     const path = headers['x-path'] || headers['x-filename'];
 
     // Visibility: x-visibility header (public|private), default: public
@@ -264,7 +296,6 @@ export class AdminImagesController {
     });
   }
 
-
   // Tag Definition Endpunkte
 
   @Get('tags/definitions')
@@ -273,7 +304,7 @@ export class AdminImagesController {
   @ApiQuery({ name: 'embed', type: [String], isArray: true, required: false })
   public async getTagDefinitions(): Promise<Array<TagDefinitionDto>> {
     const tagDefs = await this.adminImagesService.getTagDefinitions();
-    return tagDefs.map(def => ({
+    return tagDefs.map((def) => ({
       id: def.id,
       key: def.key,
       description: def.description,
@@ -284,13 +315,16 @@ export class AdminImagesController {
   @Post('tags/definitions')
   @UseGuards(AuthGuard)
   @Roles(Role.manage_images)
-  @ApiBody({ type: CreateTagDefinitionDto, description: 'Tag definition with key and optional description' })
+  @ApiBody({
+    type: CreateTagDefinitionDto,
+    description: 'Tag definition with key and optional description',
+  })
   public async createTagDefinition(
-    @Body() body: CreateTagDefinitionDto
+    @Body() body: CreateTagDefinitionDto,
   ): Promise<TagDefinitionDto> {
     const tagDef = await this.adminImagesService.createTagDefinition(
       body.key,
-      body.description
+      body.description,
     );
     return {
       id: tagDef.id,
@@ -307,10 +341,10 @@ export class AdminImagesController {
   @Roles(Role.manage_images)
   @ApiParam({ name: 'imageId', type: String, required: true })
   public async getImageTags(
-    @Param('imageId') imageId: string
+    @Param('imageId') imageId: string,
   ): Promise<Array<ImageTagDto>> {
     const tags = await this.adminImagesService.getTagsForImage(imageId);
-    return tags.map(tag => ({
+    return tags.map((tag) => ({
       id: tag.id,
       key: tag.tagDefinition.key,
       value: tag.value,
@@ -324,12 +358,12 @@ export class AdminImagesController {
   @ApiBody({ type: ImageTagInputDto, description: 'Tag with key and value' })
   public async addImageTag(
     @Param('imageId') imageId: string,
-    @Body() body: ImageTagInputDto
+    @Body() body: ImageTagInputDto,
   ): Promise<ImageTagDto> {
     const tag = await this.adminImagesService.addTagToImage(
       imageId,
       body.key,
-      body.value
+      body.value,
     );
     return {
       id: tag.id,
@@ -345,7 +379,7 @@ export class AdminImagesController {
   @ApiParam({ name: 'tagId', type: String, required: true })
   public async removeImageTag(
     @Param('imageId') imageId: string,
-    @Param('tagId') tagId: string
+    @Param('tagId') tagId: string,
   ): Promise<void> {
     await this.adminImagesService.removeTagFromImage(imageId, tagId);
   }
@@ -356,9 +390,7 @@ export class AdminImagesController {
   @UseGuards(AuthGuard)
   @Roles(Role.manage_images)
   @ApiParam({ name: 'imageId', type: String, required: true })
-  public async deleteImage(
-    @Param('imageId') id: string,
-  ): Promise<void> {
+  public async deleteImage(@Param('imageId') id: string): Promise<void> {
     const image = await this.adminImagesService.getById(id);
     if (!image) {
       throw new NotFoundException();

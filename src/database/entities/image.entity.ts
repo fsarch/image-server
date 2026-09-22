@@ -5,14 +5,14 @@ import {
   Entity,
   Index,
   PrimaryColumn,
-  PrimaryGeneratedColumn
-} from "typeorm"
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity({
   name: 'image',
 })
 export class Image {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({
@@ -71,7 +71,7 @@ export class Image {
   creationTime: Date;
 
   @DeleteDateColumn({
-    name: 'deletion_time'
+    name: 'deletion_time',
   })
   deletionTime: Date;
 }

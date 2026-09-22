@@ -1,7 +1,7 @@
-import { Module, Global } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StorageProviderFactory } from './storage-provider.factory.js';
-import { IStorageProvider } from './storage-provider.interface.js';
+import type { IStorageProvider } from './storage-provider.interface.js';
 
 export const DATA_STORAGE_PROVIDER = 'DATA_STORAGE_PROVIDER';
 export const CACHE_STORAGE_PROVIDER = 'CACHE_STORAGE_PROVIDER';

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { IStorageProvider } from './storage-provider.interface.js';
-import * as fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import * as fs from 'node:fs/promises';
+import { Injectable } from '@nestjs/common';
+import type { IStorageProvider } from './storage-provider.interface.js';
 
 @Injectable()
 export class FileSystemStorageProvider implements IStorageProvider {

@@ -1,3 +1,4 @@
+import { SignedUrlAlgorithm } from '../types/config.type.js';
 import {
   buildSignaturePayload,
   extractSignedUrlParams,
@@ -5,7 +6,6 @@ import {
   validateExpiration,
   verify,
 } from './signed-url.utils.js';
-import { SignedUrlAlgorithm } from '../types/config.type.js';
 
 describe('SignedUrlUtils', () => {
   describe('buildSignaturePayload', () => {
@@ -15,7 +15,9 @@ describe('SignedUrlUtils', () => {
     });
 
     it('should build payload with method, path, and single query parameter', () => {
-      const payload = buildSignaturePayload('GET', '/images/test', { foo: 'bar' } as const);
+      const payload = buildSignaturePayload('GET', '/images/test', {
+        foo: 'bar',
+      } as const);
       expect(payload).toBe('GET\n/images/test\nfoo=bar');
     });
 
@@ -98,7 +100,9 @@ describe('SignedUrlUtils', () => {
     it('should return false for modified payload', () => {
       const payload = 'GET\n/images/test\nfoo=bar';
       const signature = sign(payload, hmacKey);
-      expect(verify('GET\n/images/test\nfoo=baz', signature, hmacKey)).toBe(false);
+      expect(verify('GET\n/images/test\nfoo=baz', signature, hmacKey)).toBe(
+        false,
+      );
     });
 
     it('should handle different payloads with same key', () => {
@@ -119,7 +123,8 @@ describe('SignedUrlUtils', () => {
       const signature = sign(payload, hmacKey);
 
       // Create a signature that is almost correct but differs by one character
-      const similarSignature = signature.substring(0, signature.length - 1) + 
+      const similarSignature =
+        signature.substring(0, signature.length - 1) +
         (signature.charCodeAt(signature.length - 1) === 97 ? 'b' : 'a');
 
       const start = performance.now();

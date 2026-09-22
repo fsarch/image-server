@@ -1,6 +1,6 @@
+import { FsArchAppBuilder } from '@fsarch/server';
 import { AppModule } from './app.module.js';
-import { FsArchAppBuilder } from "@fsarch/server";
-import { DATABASE_OPTIONS } from "./database/index.js";
+import { DATABASE_OPTIONS } from './database/index.js';
 
 const app = await new FsArchAppBuilder(AppModule, {
   name: 'Image-Server',

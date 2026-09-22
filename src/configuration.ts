@@ -1,26 +1,22 @@
-import { readFileSync } from 'fs';
-import * as yaml from 'js-yaml';
 import { resolve } from 'node:path';
-import Joi from "joi";
-import { ConfigType } from "./types/config.type.js";
+import { readFileSync } from 'fs';
+import Joi from 'joi';
+import * as yaml from 'js-yaml';
+import type { ConfigType } from './types/config.type.js';
 
 const YAML_CONFIG_FILENAME = 'config.yaml';
 
 const CONFIG_VALIDATION_SCHEMA = Joi.object({
   uac: Joi.alternatives(
     Joi.object({
-      type: Joi.string()
-        .valid('static')
-        .required(),
+      type: Joi.string().valid('static').required(),
       users: Joi.array().items(
         Joi.object({
           user_id: Joi.string().required(),
-          permissions: Joi.array().items(
-            Joi.string()
-              .valid('manage_images')
-              .required(),
-          ).required(),
-        })
+          permissions: Joi.array()
+            .items(Joi.string().valid('manage_images').required())
+            .required(),
+        }),
       ),
     }),
   ),
@@ -33,59 +29,60 @@ const CONFIG_VALIDATION_SCHEMA = Joi.object({
         algorithm: Joi.string()
           .valid('contain', 'cover', 'inside', 'outside')
           .required(),
-        conversion: Joi.string()
-          .valid('on_demand')
-          .required(),
-        cached: Joi.boolean()
-          .required(),
-      })
-    )
+        conversion: Joi.string().valid('on_demand').required(),
+        cached: Joi.boolean().required(),
+      }),
+    ),
   }),
   naming: Joi.object({
     path: Joi.string().required(),
     type: Joi.string().valid('named').required(),
   }),
   storage: Joi.object({
-    data: Joi.alternatives().try(
-      Joi.string(),
-      Joi.object({
-        type: Joi.string().valid('filesystem').required(),
-        config: Joi.object({
-          path: Joi.string().required(),
-        }).required(),
-      }),
-      Joi.object({
-        type: Joi.string().valid('s3').required(),
-        config: Joi.object({
-          bucket: Joi.string().required(),
-          region: Joi.string().required(),
-          accessKeyId: Joi.string(),
-          secretAccessKey: Joi.string(),
-          endpoint: Joi.string(),
-          prefix: Joi.string(),
-        }).required(),
-      }),
-    ).required(),
-    cache: Joi.alternatives().try(
-      Joi.string(),
-      Joi.object({
-        type: Joi.string().valid('filesystem').required(),
-        config: Joi.object({
-          path: Joi.string().required(),
-        }).required(),
-      }),
-      Joi.object({
-        type: Joi.string().valid('s3').required(),
-        config: Joi.object({
-          bucket: Joi.string().required(),
-          region: Joi.string().required(),
-          accessKeyId: Joi.string(),
-          secretAccessKey: Joi.string(),
-          endpoint: Joi.string(),
-          prefix: Joi.string(),
-        }).required(),
-      }),
-    ).required(),
+    data: Joi.alternatives()
+      .try(
+        Joi.string(),
+        Joi.object({
+          type: Joi.string().valid('filesystem').required(),
+          config: Joi.object({
+            path: Joi.string().required(),
+          }).required(),
+        }),
+        Joi.object({
+          type: Joi.string().valid('s3').required(),
+          config: Joi.object({
+            bucket: Joi.string().required(),
+            region: Joi.string().required(),
+            accessKeyId: Joi.string(),
+            secretAccessKey: Joi.string(),
+            endpoint: Joi.string(),
+            prefix: Joi.string(),
+          }).required(),
+        }),
+      )
+      .required(),
+    cache: Joi.alternatives()
+      .try(
+        Joi.string(),
+        Joi.object({
+          type: Joi.string().valid('filesystem').required(),
+          config: Joi.object({
+            path: Joi.string().required(),
+          }).required(),
+        }),
+        Joi.object({
+          type: Joi.string().valid('s3').required(),
+          config: Joi.object({
+            bucket: Joi.string().required(),
+            region: Joi.string().required(),
+            accessKeyId: Joi.string(),
+            secretAccessKey: Joi.string(),
+            endpoint: Joi.string(),
+            prefix: Joi.string(),
+          }).required(),
+        }),
+      )
+      .required(),
   }).default({}),
   caching: Joi.object({
     memory: Joi.alternatives().try(
@@ -125,26 +122,34 @@ const CONFIG_VALIDATION_SCHEMA = Joi.object({
   }),
   signed_urls: Joi.object({
     enabled: Joi.boolean().required(),
-    keys: Joi.array().items(
-      Joi.alternatives().try(
-        Joi.object({
-          id: Joi.string().required(),
-          algorithm: Joi.string().valid('HMAC-SHA256').required(),
-          secret: Joi.string().required(),
-        }),
-        Joi.object({
-          id: Joi.string().required(),
-          algorithm: Joi.string().valid('ED25519').required(),
-          publicKey: Joi.string().required(),
-        }),
-      ),
-    ).required(),
+    keys: Joi.array()
+      .items(
+        Joi.alternatives().try(
+          Joi.object({
+            id: Joi.string().required(),
+            algorithm: Joi.string().valid('HMAC-SHA256').required(),
+            secret: Joi.string().required(),
+          }),
+          Joi.object({
+            id: Joi.string().required(),
+            algorithm: Joi.string().valid('ED25519').required(),
+            publicKey: Joi.string().required(),
+          }),
+        ),
+      )
+      .required(),
   }),
 });
 
 export default () => {
   const config = yaml.load(
-    readFileSync(resolve(process.cwd(), process.env.CONFIG_FILE_PATH || YAML_CONFIG_FILENAME), 'utf8'),
+    readFileSync(
+      resolve(
+        process.cwd(),
+        process.env.CONFIG_FILE_PATH || YAML_CONFIG_FILENAME,
+      ),
+      'utf8',
+    ),
   ) as ConfigType;
 
   // Handle environment variable overrides with backward compatibility
@@ -157,7 +162,10 @@ export default () => {
     config.storage.cache = process.env.CACHE_PATH;
   }
 
-  const valid = CONFIG_VALIDATION_SCHEMA.validate(config, { abortEarly: false, allowUnknown: true });
+  const valid = CONFIG_VALIDATION_SCHEMA.validate(config, {
+    abortEarly: false,
+    allowUnknown: true,
+  });
   if (valid.error) {
     console.error('error while validating config', valid.error.details);
     throw new Error('invalid config');

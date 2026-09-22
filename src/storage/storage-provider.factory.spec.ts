@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { StorageProviderFactory } from './storage-provider.factory';
 import { FileSystemStorageProvider } from './filesystem-storage.provider';
 import { S3StorageProvider } from './s3-storage.provider';
-import { StorageConfig } from './storage-config.types';
+import type { StorageConfig } from './storage-config.types';
+import { StorageProviderFactory } from './storage-provider.factory';
 
 describe('StorageProviderFactory', () => {
   describe('create', () => {
@@ -44,7 +44,9 @@ describe('StorageProviderFactory', () => {
         config: {},
       };
 
-      expect(() => StorageProviderFactory.create(config)).toThrow('Unknown storage type: unknown');
+      expect(() => StorageProviderFactory.create(config)).toThrow(
+        'Unknown storage type: unknown',
+      );
     });
   });
 });

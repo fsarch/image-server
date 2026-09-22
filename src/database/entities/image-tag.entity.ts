@@ -1,6 +1,14 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
-import { Image } from "./image.entity.js";
-import { TagDefinition } from "./tag-definition.entity.js";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Image } from './image.entity.js';
+import { TagDefinition } from './tag-definition.entity.js';
 
 @Entity({ name: 'image_tag' })
 @Index(['image'])
@@ -12,20 +20,28 @@ export class ImageTag {
   id: string;
 
   // @Column({ type: 'uuid', name: 'image_id' })
-  @ManyToOne(() => Image, (image) => image.id, {
-    nullable: false,
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Image,
+    (image) => image.id,
+    {
+      nullable: false,
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({ name: 'image_id' })
   image: Image;
 
   // @Column({ type: 'uuid', name: 'tag_definition_id' })
-  @ManyToOne(() => TagDefinition, (tagDef) => tagDef.id, {
-    nullable: false,
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => TagDefinition,
+    (tagDef) => tagDef.id,
+    {
+      nullable: false,
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({ name: 'tag_definition_id' })
   tagDefinition: TagDefinition;
 

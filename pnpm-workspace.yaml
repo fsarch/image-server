@@ -1,0 +1,9 @@
+allowBuilds:
+  '@scarf/scarf': false
+  '@swc/core': true
+  better-sqlite3: true
+  protobufjs: true
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-s3@3.1137.0'
+  - supertest@7.3.0
+  - unplugin-swc@2.0.0

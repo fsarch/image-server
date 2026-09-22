@@ -22,7 +22,7 @@ A NestJS-based image server with support for image uploads, tagging, visibility 
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Copy example configuration
 cp example-data/config.yml config.yaml
@@ -105,26 +105,26 @@ See `example-data/config.yml` for a complete example configuration.
 
 ```bash
 # Development mode (with hot reload)
-npm run start:dev
+pnpm run start:dev
 
 # Production mode
-npm run start:prod
+pnpm run start:prod
 
 # Build for production
-npm run build
+pnpm run build
 ```
 
 ## Database Migrations
 
 ```bash
 # Run pending migrations
-npm run migration:run
+pnpm run migration:run
 
 # Generate new migration
-npm run migration:generate -- --name=<migration-name>
+pnpm run migration:generate -- --name=<migration-name>
 
 # Revert last migration
-npm run migration:revert
+pnpm run migration:revert
 ```
 
 ## API Endpoints

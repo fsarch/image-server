@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from "@nestjs/config";
-import { CacheType } from "./cache.enum.js";
-import { LRUCache } from "lru-cache";
-import { ConfigCachingType, ConfigMemoryCachingSingleType } from "../types/config.type.js";
+import { ConfigService } from '@nestjs/config';
+import { LRUCache } from 'lru-cache';
+import {
+  ConfigCachingType,
+  type ConfigMemoryCachingSingleType,
+} from '../types/config.type.js';
+import { CacheType } from './cache.enum.js';
 
 const imageDataCache = new LRUCache<string, { size: number; value: unknown }>({
   max: 500,
@@ -12,22 +15,26 @@ const imageDataCache = new LRUCache<string, { size: number; value: unknown }>({
   },
 });
 
-const resolvePathCache = new LRUCache<string, { size: number; value: unknown }>({
-  max: 500,
-  maxSize: 250 * 1024 * 1024,
-  sizeCalculation: (value) => {
-    return JSON.stringify(value).length;
+const resolvePathCache = new LRUCache<string, { size: number; value: unknown }>(
+  {
+    max: 500,
+    maxSize: 250 * 1024 * 1024,
+    sizeCalculation: (value) => {
+      return JSON.stringify(value).length;
+    },
   },
-});
+);
 
 @Injectable()
 export class CacheService {
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
-  }
+  constructor(private readonly configService: ConfigService) {}
 
-  async getOrCreateCache<T>(cacheType: CacheType, key: Array<string>, cb: () => Promise<T>, options: { calculateSize: (value: T) => number; }): Promise<T> {
+  async getOrCreateCache<T>(
+    cacheType: CacheType,
+    key: Array<string>,
+    cb: () => Promise<T>,
+    options: { calculateSize: (value: T) => number },
+  ): Promise<T> {
     const cache = this.getCacheByType(cacheType);
 
     const cacheKey = `${cacheType}:${key.join(':')}`;
@@ -40,8 +47,11 @@ export class CacheService {
         size: options.calculateSize(generatedValue),
       };
 
-      const cacheConfig = this.configService.get<ConfigMemoryCachingSingleType>(`caching.memory.caches.${cacheType}`);
-      const cacheTtl = cacheConfig.ttl === 'Infinity' ? undefined : cacheConfig.ttl;
+      const cacheConfig = this.configService.get<ConfigMemoryCachingSingleType>(
+        `caching.memory.caches.${cacheType}`,
+      );
+      const cacheTtl =
+        cacheConfig.ttl === 'Infinity' ? undefined : cacheConfig.ttl;
 
       await cache.set(cacheKey, cacheValue, {
         ttl: cacheTtl,

@@ -7,7 +7,25 @@ on:
       - 'v*'
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+      - name: enable corepack
+        run: corepack enable
+      - name: setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: run unit tests
+        run: pnpm run test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: checkout code

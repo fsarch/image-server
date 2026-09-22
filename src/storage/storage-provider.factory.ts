@@ -1,7 +1,7 @@
-import { IStorageProvider } from './storage-provider.interface.js';
-import { StorageConfig } from './storage-config.types.js';
 import { FileSystemStorageProvider } from './filesystem-storage.provider.js';
 import { S3StorageProvider } from './s3-storage.provider.js';
+import type { StorageConfig } from './storage-config.types.js';
+import type { IStorageProvider } from './storage-provider.interface.js';
 
 export class StorageProviderFactory {
   static create(config: StorageConfig): IStorageProvider {

@@ -1,9 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Readable } from 'node:stream';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { S3StorageProvider } from './s3-storage.provider';
-import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { Readable } from 'stream';
 
-jest.mock('@aws-sdk/client-s3');
+vi.mock('@aws-sdk/client-s3');
 
 describe('S3StorageProvider', () => {
   let provider: S3StorageProvider;
@@ -18,13 +23,16 @@ describe('S3StorageProvider', () => {
 
   beforeEach(async () => {
     mockS3Client = {
-      send: jest.fn(),
+      send: vi.fn(),
     };
 
-    (S3Client as jest.Mock).mockImplementation(() => mockS3Client);
+    // biome-ignore lint/complexity/useArrowFunction: must stay constructable so `new S3Client()` works under vi.mock
+    vi.mocked(S3Client).mockImplementation(function () {
+      return mockS3Client;
+    } as unknown as () => S3Client);
 
     provider = new S3StorageProvider(mockConfig);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -35,7 +43,7 @@ describe('S3StorageProvider', () => {
     it('should read a file from S3', async () => {
       const testData = Buffer.from('test data');
       const mockStream = Readable.from([testData]);
-      
+
       mockS3Client.send.mockResolvedValue({
         Body: mockStream,
       });
@@ -44,7 +52,7 @@ describe('S3StorageProvider', () => {
 
       expect(result).toEqual(testData);
       expect(mockS3Client.send).toHaveBeenCalledWith(
-        expect.any(GetObjectCommand)
+        expect.any(GetObjectCommand),
       );
     });
 
@@ -53,10 +61,10 @@ describe('S3StorageProvider', () => {
         ...mockConfig,
         prefix: 'my-prefix',
       });
-      
+
       const testData = Buffer.from('test data');
       const mockStream = Readable.from([testData]);
-      
+
       mockS3Client.send.mockResolvedValue({
         Body: mockStream,
       });
@@ -75,7 +83,7 @@ describe('S3StorageProvider', () => {
       await provider.writeFile('test/file.txt', testBuffer);
 
       expect(mockS3Client.send).toHaveBeenCalledWith(
-        expect.any(PutObjectCommand)
+        expect.any(PutObjectCommand),
       );
     });
   });
@@ -88,7 +96,7 @@ describe('S3StorageProvider', () => {
 
       expect(result).toBe(true);
       expect(mockS3Client.send).toHaveBeenCalledWith(
-        expect.any(HeadObjectCommand)
+        expect.any(HeadObjectCommand),
       );
     });
 
@@ -116,7 +124,9 @@ describe('S3StorageProvider', () => {
       const error = new Error('S3 Error');
       mockS3Client.send.mockRejectedValue(error);
 
-      await expect(provider.exists('test/file.txt')).rejects.toThrow('S3 Error');
+      await expect(provider.exists('test/file.txt')).rejects.toThrow(
+        'S3 Error',
+      );
     });
   });
 
@@ -135,7 +145,7 @@ describe('S3StorageProvider', () => {
       await provider.deleteFile('test/file.txt');
 
       expect(mockS3Client.send).toHaveBeenCalledWith(
-        expect.any(DeleteObjectCommand)
+        expect.any(DeleteObjectCommand),
       );
     });
   });

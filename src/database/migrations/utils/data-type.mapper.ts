@@ -1,6 +1,9 @@
-import { DatabaseType } from "typeorm";
+import type { DatabaseType } from 'typeorm';
 
-const DATA_TYPES: Record<'timestamp' | 'boolean' | 'smallint', Record<'cockroachdb' | 'sqlite' | 'postgres', string>> = {
+const DATA_TYPES: Record<
+  'timestamp' | 'boolean' | 'smallint',
+  Record<'cockroachdb' | 'sqlite' | 'postgres', string>
+> = {
   timestamp: {
     cockroachdb: 'TIMESTAMPTZ',
     postgres: 'TIMESTAMPTZ',
@@ -15,13 +18,20 @@ const DATA_TYPES: Record<'timestamp' | 'boolean' | 'smallint', Record<'cockroach
     cockroachdb: 'INT2',
     postgres: 'INT2',
     sqlite: 'tinyint',
-  }
+  },
 };
 
-export const getDataType = (driver: DatabaseType, dataType: keyof typeof DATA_TYPES) => {
-  if (driver !== 'cockroachdb' && driver !== 'postgres' && driver !== 'better-sqlite3') {
+export const getDataType = (
+  driver: DatabaseType,
+  dataType: keyof typeof DATA_TYPES,
+) => {
+  if (
+    driver !== 'cockroachdb' &&
+    driver !== 'postgres' &&
+    driver !== 'better-sqlite3'
+  ) {
     throw new Error('unsupported database type');
   }
 
   return DATA_TYPES[dataType][driver];
-}
+};

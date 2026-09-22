@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ImageService } from './image.service.js';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '../cache/cache.module.js';
+import { Image } from '../database/entities/image.entity.js';
+import { ImageCache } from '../database/entities/image-cache.entity.js';
+import { ImageTag } from '../database/entities/image-tag.entity.js';
+import { Slug } from '../database/entities/slug.entity.js';
+import { TagDefinition } from '../database/entities/tag-definition.entity.js';
+import { SignedUrlModule } from '../signed-url/signed-url.module.js';
 import { ImageController } from './image.controller.js';
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Image } from "../database/entities/image.entity.js";
-import { Slug } from "../database/entities/slug.entity.js";
-import { ImageCache } from "../database/entities/image-cache.entity.js";
-import { TagDefinition } from "../database/entities/tag-definition.entity.js";
-import { ImageTag } from "../database/entities/image-tag.entity.js";
-import { CacheModule } from "../cache/cache.module.js";
-import { SignedUrlModule } from "../signed-url/signed-url.module.js";
+import { ImageService } from './image.service.js';
 
 @Module({
   imports: [
@@ -22,6 +22,6 @@ import { SignedUrlModule } from "../signed-url/signed-url.module.js";
   ],
   providers: [ImageService],
   exports: [ImageService],
-  controllers: [ImageController]
+  controllers: [ImageController],
 })
 export class ImageModule {}

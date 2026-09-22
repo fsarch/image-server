@@ -1,4 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { CacheService } from './cache.service';
 
 describe('CacheService', () => {
@@ -6,7 +7,10 @@ describe('CacheService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CacheService],
+      providers: [
+        CacheService,
+        { provide: ConfigService, useValue: { get: vi.fn() } },
+      ],
     }).compile();
 
     service = module.get<CacheService>(CacheService);

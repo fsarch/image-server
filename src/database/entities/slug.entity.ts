@@ -1,5 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm"
-import { Image } from "./image.entity.js";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Image } from './image.entity.js';
 
 @Entity()
 export class Slug {
@@ -7,11 +7,15 @@ export class Slug {
   slug: string;
 
   @Column({ type: 'uuid', name: 'image_id' })
-  @ManyToOne(() => Image, (image) => image.id, {
-    nullable: false,
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => Image,
+    (image) => image.id,
+    {
+      nullable: false,
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({
     name: 'image_id',
     foreignKeyConstraintName: 'fk__slug__image_id',

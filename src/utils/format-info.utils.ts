@@ -1,6 +1,9 @@
-import { FormatEnum } from "sharp";
+import type { FormatEnum } from 'sharp';
 
-const FORMAT_INFO: Record<'jpeg' | 'png' | 'webp' , { mimeType: string; extension: string; sharpFormat: keyof FormatEnum; }> = {
+const FORMAT_INFO: Record<
+  'jpeg' | 'png' | 'webp',
+  { mimeType: string; extension: string; sharpFormat: keyof FormatEnum }
+> = {
   jpeg: {
     mimeType: 'image/jpeg',
     extension: 'jpg',

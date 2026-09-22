@@ -1,24 +1,29 @@
-import { ConflictException, Injectable, Inject, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from "@nestjs/typeorm";
-import { Request } from 'express';
-import { In, Repository } from "typeorm";
-import { Image } from "../../database/entities/image.entity.js";
-import { ImageTagInputDto } from "../../models/image.model.js";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { ConfigService } from "@nestjs/config";
-import { ConfigStorageType } from "../../types/config.type.js";
-import sharp, { FormatEnum } from "sharp";
 import crypto from 'node:crypto';
-import { Slug } from "../../database/entities/slug.entity.js";
-import { TagDefinition } from "../../database/entities/tag-definition.entity.js";
-import { ImageTag } from "../../database/entities/image-tag.entity.js";
-import { Visibility } from "../../constants/visibility.enum.js";
-import slugify from "slugify";
-import { getFormatInfoBySharpFormat } from "../../utils/format-info.utils.js";
-import type { IStorageProvider } from "../../storage/storage-provider.interface.js";
-import { DATA_STORAGE_PROVIDER } from "../../storage/storage.module.js";
-import { FileSystemStorageProvider } from "../../storage/filesystem-storage.provider.js";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import type { Request } from 'express';
+import sharp, { FormatEnum } from 'sharp';
+import slugify from 'slugify';
+import { In, type Repository } from 'typeorm';
+import { Visibility } from '../../constants/visibility.enum.js';
+import { Image } from '../../database/entities/image.entity.js';
+import { ImageTag } from '../../database/entities/image-tag.entity.js';
+import { Slug } from '../../database/entities/slug.entity.js';
+import { TagDefinition } from '../../database/entities/tag-definition.entity.js';
+import type { ImageTagInputDto } from '../../models/image.model.js';
+import { FileSystemStorageProvider } from '../../storage/filesystem-storage.provider.js';
+import { DATA_STORAGE_PROVIDER } from '../../storage/storage.module.js';
+import type { IStorageProvider } from '../../storage/storage-provider.interface.js';
+import { ConfigStorageType } from '../../types/config.type.js';
+import { getFormatInfoBySharpFormat } from '../../utils/format-info.utils.js';
 
 @Injectable()
 export class AdminImagesService {
@@ -34,9 +39,13 @@ export class AdminImagesService {
     private readonly configService: ConfigService,
     @Inject(DATA_STORAGE_PROVIDER)
     private readonly dataStorage: IStorageProvider,
-  ) {
-  }
-  async list(filter?: { isPublic?: boolean; tags?: Array<{ key: string; value?: string }>; page?: number; limit?: number }) {
+  ) {}
+  async list(filter?: {
+    isPublic?: boolean;
+    tags?: Array<{ key: string; value?: string }>;
+    page?: number;
+    limit?: number;
+  }) {
     const queryBuilder = this.imagesRepository.createQueryBuilder('image');
 
     // Filter by is_public
@@ -59,7 +68,7 @@ export class AdminImagesService {
               AND td_${index}.key = :key_${index}
               ${tag.value ? `AND it_${index}.value = :value_${index}` : ''}
             )
-          )`
+          )`,
         );
         queryBuilder.setParameter(`key_${index}`, tag.key);
         if (tag.value) {
@@ -96,7 +105,12 @@ export class AdminImagesService {
 
   async upload(
     request: Request,
-    options: { path?: string; visibility?: Visibility; externalId?: string; tags?: ImageTagInputDto[] }
+    options: {
+      path?: string;
+      visibility?: Visibility;
+      externalId?: string;
+      tags?: ImageTagInputDto[];
+    },
   ) {
     const id = crypto.randomUUID();
     const creationTime = new Date(Date.now());
@@ -104,9 +118,11 @@ export class AdminImagesService {
     // Visibility: default to public
     const isPublic = options.visibility === Visibility.private ? false : true;
 
-    const slug = options?.path ? slugify.default(options.path, {
-      remove: /[^\w\s$*_+~.()'"!\-:@\/]+/g,
-    }) : undefined;
+    const slug = options?.path
+      ? slugify.default(options.path, {
+          remove: /[^\w\s$*_+~.()'"!\-:@/]+/g,
+        })
+      : undefined;
 
     if (options.path) {
       const slugExists = await this.slugsRepository.exists({
@@ -127,8 +143,7 @@ export class AdminImagesService {
 
     const buffer = await this.streamToBuffer(request);
 
-    const metadata = await sharp(buffer)
-      .metadata();
+    const metadata = await sharp(buffer).metadata();
 
     const formatInfo = getFormatInfoBySharpFormat(metadata.format);
 
@@ -136,10 +151,7 @@ export class AdminImagesService {
 
     await this.dataStorage.writeFile(filePath, buffer);
 
-    const hashed = crypto
-      .createHash('md5')
-      .update(buffer)
-      .digest("base64");
+    const hashed = crypto.createHash('md5').update(buffer).digest('base64');
 
     const createdImage = this.imagesRepository.create({
       id,
@@ -180,18 +192,20 @@ export class AdminImagesService {
     const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
     for (const tag of tags) {
       if (!tagKeyRegex.test(tag.key)) {
-        throw new BadRequestException(`Invalid tag key: '${tag.key}'. Only alphanumeric, underscore and hyphen are allowed.`);
+        throw new BadRequestException(
+          `Invalid tag key: '${tag.key}'. Only alphanumeric, underscore and hyphen are allowed.`,
+        );
       }
     }
 
     // Get or create all tag definitions
-    const tagKeys = tags.map(t => t.key);
+    const tagKeys = tags.map((t) => t.key);
     const existingTagDefs = await this.tagDefinitionsRepository.find({
       where: { key: In(tagKeys) },
     });
 
     const existingTagDefMap = new Map<string, TagDefinition>(
-      existingTagDefs.map(def => [def.key, def])
+      existingTagDefs.map((def) => [def.key, def]),
     );
 
     // Create missing tag definitions
@@ -211,7 +225,7 @@ export class AdminImagesService {
     }
 
     // Create image tags
-    const imageTags = tags.map(tag => {
+    const imageTags = tags.map((tag) => {
       const tagDef = existingTagDefMap.get(tag.key)!;
       return this.imageTagsRepository.create({
         image: image,
@@ -240,7 +254,12 @@ export class AdminImagesService {
     const day = creationTime.getUTCDate();
 
     const basePath = this.getStorageBasePath();
-    return path.join(basePath, year.toString(), month.toString().padStart(2, '0'), day.toString().padStart(2, '0'));
+    return path.join(
+      basePath,
+      year.toString(),
+      month.toString().padStart(2, '0'),
+      day.toString().padStart(2, '0'),
+    );
   }
 
   private getStorageBasePath(): string {
@@ -258,11 +277,16 @@ export class AdminImagesService {
     return this.tagDefinitionsRepository.find();
   }
 
-  async createTagDefinition(key: string, description?: string): Promise<TagDefinition> {
+  async createTagDefinition(
+    key: string,
+    description?: string,
+  ): Promise<TagDefinition> {
     // Validation
     const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
     if (!tagKeyRegex.test(key)) {
-      throw new BadRequestException(`Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`);
+      throw new BadRequestException(
+        `Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`,
+      );
     }
 
     // Check if key already exists
@@ -270,7 +294,9 @@ export class AdminImagesService {
       where: { key },
     });
     if (existing) {
-      throw new ConflictException(`Tag definition with key '${key}' already exists`);
+      throw new ConflictException(
+        `Tag definition with key '${key}' already exists`,
+      );
     }
 
     const tagDef = this.tagDefinitionsRepository.create({
@@ -288,7 +314,11 @@ export class AdminImagesService {
     });
   }
 
-  async addTagToImage(imageId: string, key: string, value: string): Promise<ImageTag> {
+  async addTagToImage(
+    imageId: string,
+    key: string,
+    value: string,
+  ): Promise<ImageTag> {
     const image = await this.imagesRepository.findOne({
       where: { id: imageId },
     });
@@ -305,7 +335,9 @@ export class AdminImagesService {
       // Validation
       const tagKeyRegex = /^[a-zA-Z0-9_-]+$/;
       if (!tagKeyRegex.test(key)) {
-        throw new BadRequestException(`Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`);
+        throw new BadRequestException(
+          `Invalid tag key: '${key}'. Only alphanumeric, underscore and hyphen are allowed.`,
+        );
       }
 
       tagDef = this.tagDefinitionsRepository.create({ key });
@@ -328,7 +360,10 @@ export class AdminImagesService {
     });
   }
 
-  async updateImageVisibility(imageId: string, isPublic: boolean): Promise<Image> {
+  async updateImageVisibility(
+    imageId: string,
+    isPublic: boolean,
+  ): Promise<Image> {
     const image = await this.imagesRepository.findOne({
       where: { id: imageId },
     });

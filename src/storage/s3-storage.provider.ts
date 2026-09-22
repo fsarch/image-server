@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { IStorageProvider } from './storage-provider.interface.js';
 import {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-  HeadObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3';
-import { StorageConfigS3 } from './storage-config.types.js';
+import { Injectable } from '@nestjs/common';
+import type { StorageConfigS3 } from './storage-config.types.js';
+import type { IStorageProvider } from './storage-provider.interface.js';
 
 @Injectable()
 export class S3StorageProvider implements IStorageProvider {
@@ -21,12 +21,13 @@ export class S3StorageProvider implements IStorageProvider {
 
     this.client = new S3Client({
       region: config.region,
-      credentials: config.accessKeyId && config.secretAccessKey
-        ? {
-            accessKeyId: config.accessKeyId,
-            secretAccessKey: config.secretAccessKey,
-          }
-        : undefined,
+      credentials:
+        config.accessKeyId && config.secretAccessKey
+          ? {
+              accessKeyId: config.accessKeyId,
+              secretAccessKey: config.secretAccessKey,
+            }
+          : undefined,
       endpoint: config.endpoint,
     });
   }
@@ -78,7 +79,10 @@ export class S3StorageProvider implements IStorageProvider {
       await this.client.send(command);
       return true;
     } catch (error) {
-      const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      const err = error as {
+        name?: string;
+        $metadata?: { httpStatusCode?: number };
+      };
       if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
         return false;
       }

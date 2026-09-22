@@ -1,4 +1,4 @@
-import { Role } from "../constants/role.enum.js";
+import type { Role } from '../constants/role.enum.js';
 
 enum ImageSizingAlgorithm {
   contain = 'contain',
@@ -83,7 +83,9 @@ export type ConfigImagePresetType = {
   cached: boolean;
 };
 
-export type ConfigDatabaseType = ConfigSqliteDatabaseType | ConfigCockroachdbDatabaseType;
+export type ConfigDatabaseType =
+  | ConfigSqliteDatabaseType
+  | ConfigCockroachdbDatabaseType;
 
 type ConfigSqliteDatabaseType = {
   type: 'sqlite';
@@ -99,19 +101,25 @@ type ConfigCockroachdbDatabaseType = {
   port?: number;
   ssl?: {
     rejectUnauthorized?: boolean;
-    ca?: string | {
-      path: string;
-    };
-    cert?: string | {
-      path: string;
-    };
-    key?: string | {
-      path: string;
-    };
+    ca?:
+      | string
+      | {
+          path: string;
+        };
+    cert?:
+      | string
+      | {
+          path: string;
+        };
+    key?:
+      | string
+      | {
+          path: string;
+        };
   };
 };
 
-import { StorageConfig } from '../storage/storage-config.types.js';
+import type { StorageConfig } from '../storage/storage-config.types.js';
 
 export type ConfigStorageType = {
   data: StorageConfig;
@@ -134,7 +142,7 @@ export type ConfigCachingType = {
   client: {
     enabled: boolean;
     options: ConfigCachingClientType;
-  }
+  };
 };
 
 export type ConfigCachingClientType = {
@@ -144,4 +152,4 @@ export type ConfigCachingClientType = {
 
 export type ConfigMemoryCachingSingleType = {
   ttl: number | 'Infinity';
-}
+};
