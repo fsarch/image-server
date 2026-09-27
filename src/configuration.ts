@@ -6,20 +6,11 @@ import type { ConfigType } from './types/config.type.js';
 
 const YAML_CONFIG_FILENAME = 'config.yaml';
 
+// `uac` and `auth` are intentionally not validated here: @fsarch/server
+// validates them itself (AuthModule / UacModule), the same way it already
+// does for `database`. Duplicating their schemas locally let this file
+// drift out of sync with the library (e.g. rejecting `uac.type: token-based`).
 const CONFIG_VALIDATION_SCHEMA = Joi.object({
-  uac: Joi.alternatives(
-    Joi.object({
-      type: Joi.string().valid('static').required(),
-      users: Joi.array().items(
-        Joi.object({
-          user_id: Joi.string().required(),
-          permissions: Joi.array()
-            .items(Joi.string().valid('manage_images').required())
-            .required(),
-        }),
-      ),
-    }),
-  ),
   images: Joi.object({
     presets: Joi.array().items(
       Joi.object({

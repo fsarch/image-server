@@ -1,6 +1,7 @@
 import { FsArchAppBuilder } from '@fsarch/server';
 import { AppModule } from './app.module.js';
 import { DATABASE_OPTIONS } from './database/index.js';
+import { Role } from './constants/role.enum.js';
 
 const app = await new FsArchAppBuilder(AppModule, {
   name: 'Image-Server',
@@ -12,6 +13,7 @@ const app = await new FsArchAppBuilder(AppModule, {
     version: '1.0',
   })
   .enableAuth()
+  .enableUac(Object.values(Role))
   .setDatabase(DATABASE_OPTIONS)
   .build();
 
