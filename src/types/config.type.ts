@@ -1,5 +1,3 @@
-import type { Role } from '../constants/role.enum.js';
-
 enum ImageSizingAlgorithm {
   contain = 'contain',
   cover = 'cover',
@@ -37,7 +35,6 @@ export type ConfigSignedUrlsType = {
 
 export type ConfigType = {
   auth: ConfigAuthType;
-  uac: ConfigStaticUacType;
   images: ConfigImagesType;
   database: ConfigDatabaseType;
   storage: ConfigStorageType;
@@ -58,16 +55,6 @@ type ConfigAuthUserType = {
   id: string;
   username: string;
   password: string;
-};
-
-export type ConfigStaticUacType = {
-  type: 'static';
-  users: Array<ConfigUacUserType>;
-};
-
-type ConfigUacUserType = {
-  user_id: string;
-  permissions: Array<Role>;
 };
 
 type ConfigImagesType = {
