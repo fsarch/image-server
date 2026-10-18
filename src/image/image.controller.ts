@@ -27,7 +27,7 @@ import { SignedUrlService } from '../signed-url/signed-url.service.js';
 import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
-} from '../storage/storage.module.js';
+} from '../storage/storage.tokens.js';
 import type { IStorageProvider } from '../storage/storage-provider.interface.js';
 import type {
   ConfigCachingClientType,

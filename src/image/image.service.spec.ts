@@ -9,7 +9,7 @@ import { TagDefinition } from '../database/entities/tag-definition.entity.js';
 import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
-} from '../storage/storage.module.js';
+} from '../storage/storage.tokens.js';
 import { ImageService } from './image.service.js';
 
 const mockRepository = () => ({

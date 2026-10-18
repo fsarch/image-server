@@ -132,8 +132,8 @@ const CONFIG_VALIDATION_SCHEMA = Joi.object({
   }),
 });
 
-export default () => {
-  const config = yaml.load(
+export default (serviceId?: string) => {
+  const rawConfig = yaml.load(
     readFileSync(
       resolve(
         process.cwd(),
@@ -141,19 +141,40 @@ export default () => {
       ),
       'utf8',
     ),
-  ) as ConfigType;
+  ) as ConfigType & {
+    services?: Array<{ id: string; type?: string; config: ConfigType }>;
+  };
 
-  // Handle environment variable overrides with backward compatibility
-  if (process.env.DATA_PATH) {
-    config.storage = config.storage || { data: '', cache: '' };
-    config.storage.data = process.env.DATA_PATH;
-  }
-  if (process.env.CACHE_PATH) {
-    config.storage = config.storage || { data: '', cache: '' };
-    config.storage.cache = process.env.CACHE_PATH;
+  let target: ConfigType;
+  if (serviceId) {
+    // Mono-service mount: this service's config lives under its own entry
+    // in the top-level `services` array instead of the flat root config —
+    // see @fsarch/server's ServiceMountDescriptor. The DATA_PATH/CACHE_PATH
+    // env overrides below are a standalone-only legacy mechanism (there's
+    // no single mount they'd unambiguously apply to), so they're skipped
+    // here.
+    const entry = rawConfig.services?.find((service) => service.id === serviceId);
+    if (!entry) {
+      throw new Error(
+        `missing service entry in "services" config for serviceId: ${serviceId}`,
+      );
+    }
+    target = entry.config;
+  } else {
+    target = rawConfig;
+
+    // Handle environment variable overrides with backward compatibility
+    if (process.env.DATA_PATH) {
+      target.storage = target.storage || { data: '', cache: '' };
+      target.storage.data = process.env.DATA_PATH;
+    }
+    if (process.env.CACHE_PATH) {
+      target.storage = target.storage || { data: '', cache: '' };
+      target.storage.cache = process.env.CACHE_PATH;
+    }
   }
 
-  const valid = CONFIG_VALIDATION_SCHEMA.validate(config, {
+  const valid = CONFIG_VALIDATION_SCHEMA.validate(target, {
     abortEarly: false,
     allowUnknown: true,
   });
@@ -162,5 +183,5 @@ export default () => {
     throw new Error('invalid config');
   }
 
-  return config;
+  return target;
 };

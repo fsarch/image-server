@@ -20,7 +20,7 @@ import { Slug } from '../../database/entities/slug.entity.js';
 import { TagDefinition } from '../../database/entities/tag-definition.entity.js';
 import type { ImageTagInputDto } from '../../models/image.model.js';
 import { FileSystemStorageProvider } from '../../storage/filesystem-storage.provider.js';
-import { DATA_STORAGE_PROVIDER } from '../../storage/storage.module.js';
+import { DATA_STORAGE_PROVIDER } from '../../storage/storage.tokens.js';
 import type { IStorageProvider } from '../../storage/storage-provider.interface.js';
 import { ConfigStorageType } from '../../types/config.type.js';
 import { getFormatInfoBySharpFormat } from '../../utils/format-info.utils.js';

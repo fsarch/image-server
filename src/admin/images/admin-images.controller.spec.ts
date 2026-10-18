@@ -3,7 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Slug } from '../../database/entities/slug.entity.js';
 import { ImageService } from '../../image/image.service.js';
-import { DATA_STORAGE_PROVIDER } from '../../storage/storage.module.js';
+import { DATA_STORAGE_PROVIDER } from '../../storage/storage.tokens.js';
 import { AdminImagesController } from './admin-images.controller.js';
 import { AdminImagesService } from './admin-images.service.js';
 

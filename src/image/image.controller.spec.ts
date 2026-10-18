@@ -5,7 +5,7 @@ import { SignedUrlService } from '../signed-url/signed-url.service.js';
 import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
-} from '../storage/storage.module.js';
+} from '../storage/storage.tokens.js';
 import { ImageController } from './image.controller.js';
 import { ImageService } from './image.service.js';
 

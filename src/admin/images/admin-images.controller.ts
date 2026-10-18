@@ -48,7 +48,7 @@ import {
   PatchImageDto,
   type TagDefinitionDto,
 } from '../../models/image.model.js';
-import { DATA_STORAGE_PROVIDER } from '../../storage/storage.module.js';
+import { DATA_STORAGE_PROVIDER } from '../../storage/storage.tokens.js';
 import type { IStorageProvider } from '../../storage/storage-provider.interface.js';
 import { getFormatInfoByMimeType } from '../../utils/format-info.utils.js';
 import { AdminImagesService } from './admin-images.service.js';

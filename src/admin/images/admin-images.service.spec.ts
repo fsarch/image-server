@@ -5,7 +5,7 @@ import { Image } from '../../database/entities/image.entity.js';
 import { ImageTag } from '../../database/entities/image-tag.entity.js';
 import { Slug } from '../../database/entities/slug.entity.js';
 import { TagDefinition } from '../../database/entities/tag-definition.entity.js';
-import { DATA_STORAGE_PROVIDER } from '../../storage/storage.module.js';
+import { DATA_STORAGE_PROVIDER } from '../../storage/storage.tokens.js';
 import { AdminImagesService } from './admin-images.service.js';
 
 const mockRepository = () => ({

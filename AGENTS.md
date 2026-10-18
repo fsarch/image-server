@@ -20,27 +20,29 @@ image-server/
 │   │   ├── migrations/           # Database migrations
 │   │   │   ├── 1719665254677-base-tables.migration.ts
 │   │   │   └── 1784408015000-add-image-metadata-and-tags.migration.ts
+│   │   ├── image-preset-seeder.service.ts  # Seeds `image_preset` rows from config on boot
 │   │   └── index.ts              # Entity/Migration registration
+│   │
+│   ├── lib/                      # Feature module + mono-service descriptor
+│   │   ├── image-server.module.ts  # createServiceModule() — all controllers/providers, flattened
+│   │   └── index.ts              # Exports the module + the `descriptor` used by main.ts and addService()
 │   │
 │   ├── models/                   # DTOs and Models
 │   │   └── image.model.ts        # ImageDto, ImageTagDto, TagDefinitionDto
 │   │
 │   ├── admin/images/             # Admin API
 │   │   ├── admin-images.controller.ts   # Admin endpoints
-│   │   ├── admin-images.service.ts      # Admin service logic
-│   │   └── admin-images.module.ts       # Admin module
+│   │   └── admin-images.service.ts      # Admin service logic
 │   │
 │   ├── image/                    # Public API
 │   │   ├── image.controller.ts   # Public image delivery
-│   │   ├── image.service.ts      # Image resolve logic
-│   │   └── image.module.ts       # Image module
+│   │   └── image.service.ts      # Image resolve logic
 │   │
 │   ├── signed-url/               # Signed URL functionality
-│   │   ├── signed-url.module.ts  # Signed URL module
 │   │   └── signed-url.service.ts # Signed URL generation and validation
 │   │
 │   ├── cache/                    # Caching
-│   ├── storage/                  # Storage providers (FS, S3)
+│   ├── storage/                  # Storage providers (FS, S3), storage.tokens.ts (DI tokens)
 │   ├── utils/                    # Utility functions
 │   │   └── signed-url.utils.ts  # Payload building, signing, verification
 │   └── types/                    # TypeScript types
@@ -240,9 +242,19 @@ ImageTag Many────1 TagDefinition
 - `@fsarch/server` - Auth, Pagination Utils, etc.
 
 ### Internal Modules
-- `DatabaseModule` - TypeORM Configuration
-- `StorageModule` - Storage providers (FS, S3)
-- `CacheModule` - Caching
+- `ImageServerModule` (`src/lib/image-server.module.ts`) - the one feature module, built via
+  `@fsarch/server`'s `createServiceModule()`. All controllers/providers (admin images, public
+  image delivery, cache, signed URLs, storage providers, the preset seeder) are flattened into
+  this single module rather than nested per-feature modules, because a mono-service mount's
+  named TypeORM connection and scoped config only cover providers/controllers declared
+  *directly* in the generated module (see the file's doc comment).
+- `src/lib/index.ts` exports this module plus `descriptor`, the data form of `main.ts`'s
+  `.enableAuth().enableUac(...).addSwagger(...)` calls, shared with a mono-service harness's
+  `.addService({ id, ...descriptor })`.
+- `DatabaseModule` (from `@fsarch/server`) - TypeORM Configuration
+- `configuration.ts` - loads `config.yaml`; standalone reads the top-level config unchanged,
+  a mono-service mount (`connectionName` set) reads its own `services[].config` entry instead
+  (see `ConfigModule.forRoot()` in `image-server.module.ts`)
 
 ---
 

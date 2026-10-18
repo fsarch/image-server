@@ -2,6 +2,7 @@ allowBuilds:
   '@scarf/scarf': false
   '@swc/core': true
   better-sqlite3: true
+  esbuild: true
   protobufjs: true
 minimumReleaseAgeExclude:
   - '@aws-sdk/client-s3@3.1137.0 || 3.1138.0'
@@ -27,4 +28,3 @@ minimumReleaseAgeExclude:
   - '@smithy/core@3.35.0'
   - '@smithy/types@4.19.0'
   - dotenv@18.0.3
-  - '@fsarch/server@0.4.0'
