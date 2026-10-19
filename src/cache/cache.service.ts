@@ -37,13 +37,13 @@ export class CacheService {
   ): Promise<T> {
     const cache = this.getCacheByType(cacheType);
 
-    const cacheKey = `${cacheType}:${key.join(':')}`;
+    const cacheKey = this.buildCacheKey(cacheType, key);
 
     let cacheValue = await cache.get(cacheKey);
     if (!cacheValue) {
       const generatedValue = await cb();
       cacheValue = {
-        value: await cb(),
+        value: generatedValue,
         size: options.calculateSize(generatedValue),
       };
 
@@ -59,6 +59,14 @@ export class CacheService {
     }
 
     return cacheValue.value as T;
+  }
+
+  invalidate(cacheType: CacheType, key: Array<string>) {
+    this.getCacheByType(cacheType).delete(this.buildCacheKey(cacheType, key));
+  }
+
+  private buildCacheKey(cacheType: CacheType, key: Array<string>) {
+    return `${cacheType}:${key.join(':')}`;
   }
 
   private getCacheByType(cacheType: CacheType) {

@@ -69,6 +69,7 @@ export class ImageController {
   private async getBaseImage(
     res: Response,
     resolveInfo: ResolveResponseType,
+    resolveCacheKey: Array<string>,
     preferredMimeTypes: Array<string>,
   ) {
     const clientCachingOptions =
@@ -123,6 +124,10 @@ export class ImageController {
         if (error.code === 'ENOENT' || error.name === 'NoSuchKey') {
           console.error('cached image not found', cacheInfo);
 
+          // The memoized resolve info still points at the missing cache
+          // file; drop it so the next request re-resolves from the database.
+          this.cacheService.invalidate(CacheType.ResolvePath, resolveCacheKey);
+
           runInBackground(async () => {
             await this.imageService
               .removeCached(
@@ -173,6 +178,9 @@ export class ImageController {
         resolveInfo.preset.alias,
         preferredFormat.mimeType,
       );
+
+      // Make the next request pick up the freshly written cache file.
+      this.cacheService.invalidate(CacheType.ResolvePath, resolveCacheKey);
     }
 
     res.set({
@@ -250,9 +258,16 @@ export class ImageController {
     // Include signed URL validity in cache key to prevent cache poisoning
     const cacheKeySuffix = isSignedUrlValid ? '_signed' : '';
 
+    const resolveCacheKey = [
+      id,
+      '',
+      presetAlias,
+      preferredMimeTypes.join('_'),
+      cacheKeySuffix,
+    ];
     const resolveInfo = await this.cacheService.getOrCreateCache(
       CacheType.ResolvePath,
-      [id, '', presetAlias, preferredMimeTypes.join('_'), cacheKeySuffix],
+      resolveCacheKey,
       async () => {
         return await this.imageService.resolveImage({
           presetAlias,
@@ -268,7 +283,12 @@ export class ImageController {
       },
     );
 
-    await this.getBaseImage(res, resolveInfo, preferredMimeTypes);
+    await this.getBaseImage(
+      res,
+      resolveInfo,
+      resolveCacheKey,
+      preferredMimeTypes,
+    );
   }
 
   @Public()
@@ -352,9 +372,16 @@ export class ImageController {
     // This ensures private images are only cached with valid signatures
     const cacheKeySuffix = isSignedUrlValid ? '_signed' : '';
 
+    const resolveCacheKey = [
+      id,
+      slug,
+      presetAlias,
+      preferredMimeTypes.join('_'),
+      cacheKeySuffix,
+    ];
     const resolveInfo = await this.cacheService.getOrCreateCache(
       CacheType.ResolvePath,
-      [id, slug, presetAlias, preferredMimeTypes.join('_'), cacheKeySuffix],
+      resolveCacheKey,
       async () => {
         return await this.imageService.resolveImage({
           slug,
@@ -371,6 +398,11 @@ export class ImageController {
       },
     );
 
-    await this.getBaseImage(res, resolveInfo, preferredMimeTypes);
+    await this.getBaseImage(
+      res,
+      resolveInfo,
+      resolveCacheKey,
+      preferredMimeTypes,
+    );
   }
 }
