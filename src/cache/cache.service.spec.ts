@@ -1,5 +1,5 @@
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token';
 import { CacheService } from './cache.service';
 
 describe('CacheService', () => {
@@ -9,7 +9,7 @@ describe('CacheService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CacheService,
-        { provide: ConfigService, useValue: { get: vi.fn() } },
+        { provide: IMAGE_SERVER_APP_CONFIG, useValue: {} },
       ],
     }).compile();
 

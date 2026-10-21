@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
-import type { ConfigImagePresetType } from '../types/config.type.js';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
+import type { ConfigType } from '../types/config.type.js';
 import { ImagePreset } from './entities/image-preset.entity.js';
 
 @Injectable()
@@ -10,14 +10,12 @@ export class ImagePresetSeeder implements OnModuleInit {
   constructor(
     @InjectRepository(ImagePreset)
     private readonly imagePresetsRepository: Repository<ImagePreset>,
-    private readonly configService: ConfigService,
+    @Inject(IMAGE_SERVER_APP_CONFIG)
+    private readonly config: ConfigType,
   ) {}
 
   onModuleInit(): void {
-    const imagePresets =
-      this.configService.get<Array<ConfigImagePresetType>>('images.presets');
-
-    imagePresets.forEach((imagePreset) => {
+    this.config.images.presets.forEach((imagePreset) => {
       this.imagePresetsRepository.save({
         id: imagePreset.alias,
       });

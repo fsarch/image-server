@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Request } from 'express';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
 import {
   type ConfigSignedUrlKeyType,
   type ConfigSignedUrlsType,
+  type ConfigType,
   SignedUrlAlgorithm,
 } from '../types/config.type.js';
 import {
@@ -71,9 +72,8 @@ export interface SignedUrlValidationResult {
 export class SignedUrlService {
   private readonly signedUrlsConfig: ConfigSignedUrlsType | undefined;
 
-  constructor(private readonly configService: ConfigService) {
-    this.signedUrlsConfig =
-      this.configService.get<ConfigSignedUrlsType>('signed_urls');
+  constructor(@Inject(IMAGE_SERVER_APP_CONFIG) config: ConfigType) {
+    this.signedUrlsConfig = config.signed_urls;
   }
 
   /**

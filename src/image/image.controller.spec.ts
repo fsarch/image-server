@@ -1,6 +1,6 @@
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { CacheService } from '../cache/cache.service.js';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
 import { SignedUrlService } from '../signed-url/signed-url.service.js';
 import {
   CACHE_STORAGE_PROVIDER,
@@ -16,7 +16,7 @@ describe('ImageController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ImageController],
       providers: [
-        { provide: ConfigService, useValue: { get: vi.fn() } },
+        { provide: IMAGE_SERVER_APP_CONFIG, useValue: {} },
         { provide: ImageService, useValue: {} },
         { provide: CacheService, useValue: {} },
         { provide: SignedUrlService, useValue: {} },

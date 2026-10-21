@@ -1,4 +1,3 @@
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Image } from '../database/entities/image.entity.js';
@@ -6,6 +5,7 @@ import { ImageCache } from '../database/entities/image-cache.entity.js';
 import { ImageTag } from '../database/entities/image-tag.entity.js';
 import { Slug } from '../database/entities/slug.entity.js';
 import { TagDefinition } from '../database/entities/tag-definition.entity.js';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
 import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
@@ -37,7 +37,7 @@ describe('ImageService', () => {
           useFactory: mockRepository,
         },
         { provide: getRepositoryToken(ImageTag), useFactory: mockRepository },
-        { provide: ConfigService, useValue: { get: vi.fn() } },
+        { provide: IMAGE_SERVER_APP_CONFIG, useValue: {} },
         { provide: DATA_STORAGE_PROVIDER, useValue: {} },
         { provide: CACHE_STORAGE_PROVIDER, useValue: {} },
       ],

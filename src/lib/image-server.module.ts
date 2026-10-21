@@ -1,5 +1,5 @@
 import { createServiceModule } from '@fsarch/server';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Module } from '@nestjs/common';
 import { AdminImagesController } from '../admin/images/admin-images.controller.js';
 import { AdminImagesService } from '../admin/images/admin-images.service.js';
 import { CacheService } from '../cache/cache.service.js';
@@ -14,6 +14,8 @@ import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
 } from '../storage/storage.tokens.js';
+import type { ConfigType } from '../types/config.type.js';
+import { IMAGE_SERVER_APP_CONFIG } from './image-server-app-config.token.js';
 import { DATABASE_OPTIONS } from '../database/index.js';
 
 /**
@@ -27,18 +29,27 @@ import { DATABASE_OPTIONS } from '../database/index.js';
  * attached to, and `createServiceModule()`'s single call only covers this
  * module's own direct providers/controllers, not nested ones.
  *
- * `ConfigModule.forRoot()` is kept inside this module's own `imports`
- * (rather than, as before, loaded globally by `AppModule`) because its
- * `isGlobal` flag — like `@Global()` — makes it a *process-wide* singleton
- * regardless of dynamic options. Mounting this service twice would
- * otherwise mean one `config.yaml` top-level section wins for both mounts.
- * Standalone (no `connectionName`) keeps `isGlobal: true`, i.e. unchanged
- * behavior; a mount gets `isGlobal: false` plus the `connectionName`-scoped
- * `services[].config` section (see `configuration.ts`), scoped to this
- * module only — safe because every consumer of `ConfigService` (storage
- * providers, `CacheService`, `SignedUrlService`, `ImageService`,
- * `AdminImagesService`, `ImagePresetSeeder`) is a sibling *inside* this same
- * flattened module.
+ * `IMAGE_SERVER_APP_CONFIG` provides this service's own validated
+ * `images`/`naming`/`storage`/`caching`/`signed_urls` config (everything
+ * `configuration.ts` reads and validates) as a plain value, instead of
+ * routing it through `@nestjs/config`'s `ConfigModule`. All six consumers
+ * (storage providers, `CacheService`, `SignedUrlService`, `ImageService`,
+ * `AdminImagesService`, `ImagePresetSeeder`, `ImageController`) inject this
+ * token directly rather than a generic `ConfigService`.
+ *
+ * This used to be `ConfigModule.forRoot({ load: [...], isGlobal:
+ * !connectionName })`, later `ConfigModule.forFeature(() =>
+ * configuration(connectionName))` - both were empirically found to corrupt
+ * Nest's module-token bookkeeping for *every other concurrently mounted
+ * service's* own `AuthModule.register(id)`, reproduced with this service
+ * mounted alongside *any* other one (calendar-server, image-editor-server,
+ * ...), each failing with "Nest can't resolve dependencies of the
+ * AuthGuard ... AuthService" - regardless of whether the second
+ * `ConfigModule` registration was async (`forRoot`) or sync (`forFeature`).
+ * Not calling `@nestjs/config`'s `ConfigModule` a second time at all, in
+ * any form, is what actually fixes it - this module now has nothing to do
+ * with `ConfigHostModule`'s shared/global state, so there's nothing left
+ * to corrupt.
  */
 export const ImageServerModule = createServiceModule({
   entities: DATABASE_OPTIONS.entities,
@@ -51,26 +62,32 @@ export const ImageServerModule = createServiceModule({
     ImagePresetSeeder,
     {
       provide: DATA_STORAGE_PROVIDER,
-      useFactory: (configService: ConfigService): IStorageProvider => {
-        const storageConfig = configService.get('storage.data');
-        return StorageProviderFactory.create(storageConfig);
+      useFactory: (config: ConfigType): IStorageProvider => {
+        return StorageProviderFactory.create(config.storage.data);
       },
-      inject: [ConfigService],
+      inject: [IMAGE_SERVER_APP_CONFIG],
     },
     {
       provide: CACHE_STORAGE_PROVIDER,
-      useFactory: (configService: ConfigService): IStorageProvider => {
-        const storageConfig = configService.get('storage.cache');
-        return StorageProviderFactory.create(storageConfig);
+      useFactory: (config: ConfigType): IStorageProvider => {
+        return StorageProviderFactory.create(config.storage.cache);
       },
-      inject: [ConfigService],
+      inject: [IMAGE_SERVER_APP_CONFIG],
     },
   ],
-  imports: (connectionName) => [
-    ConfigModule.forRoot({
-      load: [() => configuration(connectionName)],
-      isGlobal: !connectionName,
-    }),
-  ],
+  imports: (connectionName) => {
+    @Module({
+      providers: [
+        {
+          provide: IMAGE_SERVER_APP_CONFIG,
+          useFactory: (): ConfigType => configuration(connectionName),
+        },
+      ],
+      exports: [IMAGE_SERVER_APP_CONFIG],
+    })
+    class ImageServerAppConfigModule {}
+
+    return [ImageServerAppConfigModule];
+  },
   exports: [ImageService, CacheService, SignedUrlService],
 });

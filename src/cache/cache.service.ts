@@ -1,10 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable } from '@nestjs/common';
 import { LRUCache } from 'lru-cache';
-import {
-  ConfigCachingType,
-  type ConfigMemoryCachingSingleType,
-} from '../types/config.type.js';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
+import type { ConfigType } from '../types/config.type.js';
 import { CacheType } from './cache.enum.js';
 
 const imageDataCache = new LRUCache<string, { size: number; value: unknown }>({
@@ -27,7 +24,9 @@ const resolvePathCache = new LRUCache<string, { size: number; value: unknown }>(
 
 @Injectable()
 export class CacheService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    @Inject(IMAGE_SERVER_APP_CONFIG) private readonly config: ConfigType,
+  ) {}
 
   async getOrCreateCache<T>(
     cacheType: CacheType,
@@ -47,9 +46,7 @@ export class CacheService {
         size: options.calculateSize(generatedValue),
       };
 
-      const cacheConfig = this.configService.get<ConfigMemoryCachingSingleType>(
-        `caching.memory.caches.${cacheType}`,
-      );
+      const cacheConfig = this.config.caching.memory.caches[cacheType];
       const cacheTtl =
         cacheConfig.ttl === 'Infinity' ? undefined : cacheConfig.ttl;
 

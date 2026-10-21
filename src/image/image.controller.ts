@@ -11,7 +11,6 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   ApiConsumes,
   ApiHeader,
@@ -23,16 +22,14 @@ import type { Request, Response } from 'express';
 import sharp from 'sharp';
 import { CacheType } from '../cache/cache.enum.js';
 import { CacheService } from '../cache/cache.service.js';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
 import { SignedUrlService } from '../signed-url/signed-url.service.js';
 import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
 } from '../storage/storage.tokens.js';
 import type { IStorageProvider } from '../storage/storage-provider.interface.js';
-import type {
-  ConfigCachingClientType,
-  ConfigNamingType,
-} from '../types/config.type.js';
+import type { ConfigType } from '../types/config.type.js';
 import {
   getFormatInfoByExtension,
   getFormatInfoByMimeType,
@@ -56,7 +53,8 @@ export class ImageController {
   private readonly logger = new Logger(ImageController.name);
 
   constructor(
-    private readonly configService: ConfigService,
+    @Inject(IMAGE_SERVER_APP_CONFIG)
+    private readonly config: ConfigType,
     private readonly imageService: ImageService,
     private readonly cacheService: CacheService,
     private readonly signedUrlService: SignedUrlService,
@@ -72,8 +70,7 @@ export class ImageController {
     resolveCacheKey: Array<string>,
     preferredMimeTypes: Array<string>,
   ) {
-    const clientCachingOptions =
-      this.configService.get<ConfigCachingClientType>('caching.client.options');
+    const clientCachingOptions = this.config.caching.client.options;
     const cacheControlHeader = `public, max-age=${Math.floor(clientCachingOptions.max_age / 1000)}, s-maxage=${Math.floor(clientCachingOptions.s_max_age / 1000)}, must-revalidate`;
 
     if (resolveInfo.imageCaches?.[0]?.path) {
@@ -337,7 +334,7 @@ export class ImageController {
   ) {
     const rawSlug = params.slug?.join('/');
 
-    const namingOptions = this.configService.get<ConfigNamingType>('naming');
+    const namingOptions = this.config.naming;
     const convertedPath = namingOptions.path
       .replaceAll('/', '\\/')
       .replaceAll('.', '\\.')

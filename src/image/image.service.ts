@@ -7,7 +7,6 @@ import {
   NotFoundException,
   NotImplementedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, type Repository } from 'typeorm';
 import { Image } from '../database/entities/image.entity.js';
@@ -16,13 +15,14 @@ import type { ImagePreset } from '../database/entities/image-preset.entity.js';
 import { ImageTag } from '../database/entities/image-tag.entity.js';
 import { Slug } from '../database/entities/slug.entity.js';
 import { TagDefinition } from '../database/entities/tag-definition.entity.js';
+import { IMAGE_SERVER_APP_CONFIG } from '../lib/image-server-app-config.token.js';
 import { FileSystemStorageProvider } from '../storage/filesystem-storage.provider.js';
 import {
   CACHE_STORAGE_PROVIDER,
   DATA_STORAGE_PROVIDER,
 } from '../storage/storage.tokens.js';
 import type { IStorageProvider } from '../storage/storage-provider.interface.js';
-import type { ConfigImagePresetType } from '../types/config.type.js';
+import type { ConfigImagePresetType, ConfigType } from '../types/config.type.js';
 import { getFormatInfoByMimeType } from '../utils/format-info.utils.js';
 
 export type ResolveResponseType = {
@@ -47,7 +47,8 @@ export class ImageService {
     private tagDefinitionsRepository: Repository<TagDefinition>,
     @InjectRepository(ImageTag)
     private imageTagsRepository: Repository<ImageTag>,
-    private readonly configService: ConfigService,
+    @Inject(IMAGE_SERVER_APP_CONFIG)
+    private readonly config: ConfigType,
     @Inject(DATA_STORAGE_PROVIDER)
     private readonly dataStorage: IStorageProvider,
     @Inject(CACHE_STORAGE_PROVIDER)
@@ -71,8 +72,7 @@ export class ImageService {
   }): Promise<ResolveResponseType> {
     let image: Image | undefined;
 
-    const presets =
-      this.configService.get<Array<ConfigImagePresetType>>('images.presets');
+    const presets = this.config.images.presets;
     const preset = presets.find((p) => options.presetAlias === p.alias);
     if (!preset) {
       this.logger.warn(`Invalid image preset alias: {presetAlias}`, {
